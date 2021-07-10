@@ -162,10 +162,14 @@ def test_clear(tree, data_fixture):
 
 
 # Test hashes
-
-def test_blake3(data_fixture):
-    tree_source = MerkleTree('blake3')
-    tree_destination = MerkleTree('blake3')
+@pytest.mark.parametrize("hash", [
+    "blake2s",
+    "blake2b",
+    "blake3"
+])
+def test_blake3(hash, data_fixture):
+    tree_source = MerkleTree(hash)
+    tree_destination = MerkleTree(hash)
     
     for i in range(0, len(data_fixture)):
         if i % 2 == 0:
