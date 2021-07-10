@@ -129,7 +129,7 @@ class MerkleTree(object):
     def __contains__(self, item) -> bool:
         index = self._find_position(self.leaves, item)
 
-        if self.leaves[index].key == item:
+        if index < len(self.leaves) and self.leaves[index].key == item:
             return True
         else:
             return False
@@ -144,4 +144,4 @@ class MerkleTree(object):
             return False
 
     def __ne__(self, o: object) -> bool:
-        return not self.__ne__(o)
+        return not self.__eq__(o)
