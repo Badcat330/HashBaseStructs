@@ -43,7 +43,10 @@ class MerkleTree(object):
         pass
 
     def swap(self, other_tree):
-        pass
+        self.hash_function, other_tree.hash_function = other_tree.hash_function, self.hash_function
+        self.leaves, other_tree.leaves = other_tree.leaves, self.leaves
+        self.levels, other_tree.levels = other_tree.levels, self.levels
+        self.leaves_count, other_tree.leaves_count = other_tree.leaves_count, self.leaves_count
 
     def _find_position(self, leaves, key):
         min_value = 0

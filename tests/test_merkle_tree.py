@@ -134,8 +134,23 @@ def test_changeset():
     pass
 
 # Test help methodth
-def test_swap():
-    pass
+def test_swap(data_fixture):
+    tree_source = MerkleTree()
+    tree_destination = MerkleTree()
+
+    for i in range(0, len(data_fixture)):
+        if i % 2 == 0:
+            tree_source[data_fixture[i][0]] = data_fixture[i][1]
+        else:
+            tree_destination[data_fixture[i][0]] = data_fixture[i][1]
+
+    tree_source.swap(tree_destination)
+
+    for i in range(0, len(data_fixture)):
+        if i % 2 == 0:
+            assert tree_destination[data_fixture[i][0]] == data_fixture[i][1]
+        else:
+            assert tree_source[data_fixture[i][0]] == data_fixture[i][1]
 
 def test_clear(tree, data_fixture):
     for item in data_fixture:
