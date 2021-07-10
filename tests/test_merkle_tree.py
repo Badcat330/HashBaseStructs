@@ -160,3 +160,19 @@ def test_clear(tree, data_fixture):
 
     assert len(tree) == 0
 
+
+# Test hashes
+
+def test_blake3(data_fixture):
+    tree_source = MerkleTree('blake3')
+    tree_destination = MerkleTree('blake3')
+    
+    for i in range(0, len(data_fixture)):
+        if i % 2 == 0:
+            tree_source[data_fixture[i][0]] = data_fixture[i][1]
+        else:
+            tree_destination[data_fixture[i][0]] = data_fixture[i][1]
+
+    assert tree_source == tree_source
+    assert not tree_source == tree_destination
+

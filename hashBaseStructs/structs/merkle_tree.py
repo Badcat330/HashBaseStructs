@@ -1,4 +1,5 @@
 import hashlib
+from blake3 import blake3
 
 
 class MerkleTreeNode(object):
@@ -17,8 +18,8 @@ class MerkleTree(object):
 
     def __init__(self, hash_type='sha256'):
         try:
-            if hash_type in ['tiger', 'blake3']:
-                pass
+            if hash_type == 'blake3':
+                self.hash_function = blake3
             else:
                 self.hash_function = getattr(hashlib, hash_type)
         except AttributeError:
