@@ -50,9 +50,12 @@ class MerkleTree(object):
         max_value = len(leaves) - 1
         avg = (min_value + max_value) // 2
 
+        if avg == -1:
+            return 0
+
         while min_value < max_value:
             if leaves[avg].key == key:
-                return leaves[avg].value
+                return avg
             elif leaves[avg].key < key:
                 return avg + 1 + self._find_position(leaves[avg + 1:], key)
             else:
@@ -83,11 +86,14 @@ class MerkleTree(object):
     def _seitem(self, key, value: object, is_build: bool):
         index = self._find_position(self.leaves, key)
 
-        if key == self.leaves[index].key:
+        if index >= len(self.leaves) or self.leaves[index].key > key:
+            self.leaves.insert(index, MerkleTreeLeave(key, self._get_hash(value), value))
+            self.leaves_count += 1
+        elif key == self.leaves[index].key:
             self.leaves[index].value = value
             self.leaves[index].hash = self._get_hash(value)
         else:
-            self.leaves.insert(index, MerkleTreeLeave(key, self._get_hash(value), value))
+            self.leaves.insert(index + 1, MerkleTreeLeave(key, self._get_hash(value), value))
             self.leaves_count += 1
 
         if is_build:
@@ -95,10 +101,12 @@ class MerkleTree(object):
 
     def _calculate_next_level(self, prev_level):
         new_level = []
-        for i in range(1, prev_level, 2):
+        for i in range(1, len(prev_level), 2):
             left = prev_level[i - 1]
-            right = prev_level[i + 1]
-            new_level.append(MerkleTreeNode(max(left.key, right.key), self._get_hash(left + right)))
+            right = prev_level[i]
+            new_element = MerkleTreeNode(max(left.key, right.key),
+                                         self._get_hash(left.hash + right.hash))
+            new_level.append(new_element)
 
         if len(prev_level) % 2 == 1:
             last_element = prev_level[-1]
@@ -112,6 +120,7 @@ class MerkleTree(object):
             self._calculate_next_level(self.levels[0])
 
     def _get_hash(self, value):
+        value = str(value)
         value = value.encode('utf-8')
         hash_value = self.hash_function(value).hexdigest()
         hash_value = bytearray.fromhex(hash_value)
