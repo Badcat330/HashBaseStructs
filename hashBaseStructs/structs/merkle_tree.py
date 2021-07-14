@@ -3,15 +3,22 @@ from blake3 import blake3
 
 
 class MerkleTreeNode(object):
-    def __init__(self, key, hash_value):
-        self.key = key
+    def __init__(self, hash_value=None):
         self.hash = hash_value
 
 
 class MerkleTreeLeave(MerkleTreeNode):
-    def __init__(self, key, hash_value, value):
-        super().__init__(key, hash_value)
+    def __init__(self, key, value):
+        super().__init__()
+        self.key = key
         self.value = value
+
+class MerkleSerchInfo(object):
+    def __init__(self, level_index, item_idex, size):
+        self.level_index = level_index
+        self.item_idex = item_idex
+        self.size = size
+        
 
 
 class MerkleTree(object):
@@ -40,8 +47,37 @@ class MerkleTree(object):
 
         self._build()
 
+    def _get_level_node(self, level_index, item_index):
+        if level_index < len(self.levels) and item_index < len(self.levels[level_index]):
+            return self.levels[level_index][item_index]
+        else:
+            return None
+
     def get_changeset(self, destination):
-        pass
+        source_info = MerkleSerchInfo(0, 0, self.leaves_count)
+        destination_info = MerkleSerchInfo(0, 0, destination.leaves_count)
+        self._get_changeset(destination, source_info, destination_info)
+
+    def _get_changeset(self, destination, source_info: MerkleSerchInfo, destination_info: MerkleSerchInfo):
+        if destination_info.size > source_info.size:
+            left_subtree_size = 2 ** (len(destination.levels) - 2)
+            destination_info_left = MerkleSerchInfo(destination_info.level_index + 1, destination_info.item_idex * 2, left_subtree_size)
+            destination_info_right = MerkleSerchInfo(destination_info.level_index + 1, destination_info.item_idex * 2 + 1, 
+                                                     destination_info.size - left_subtree_size)
+            return self.get_changeset(destination, source_info, destination_info_left) + \
+                   self.get_changeset(destination, source_info, destination_info_right)
+        elif destination_info.size < source_info.size:
+            left_subtree_size = 2 ** (len(self.levels) - 2)
+            source_info_left = MerkleSerchInfo(source_info.level_index + 1, source_info.item_idex * 2, left_subtree_size)
+            source_info_right = MerkleSerchInfo(source_info.level_index + 1, source_info.item_idex * 2 + 1, 
+                                                     source_info.size - left_subtree_size)
+            return self.get_changeset(destination, source_info_left, destination_info) + \
+                   self.get_changeset(destination, source_info_right, destination)
+        else:
+            pass
+
+            
+
 
     def swap(self, other_tree):
         self.hash_function, other_tree.hash_function = other_tree.hash_function, self.hash_function
@@ -81,6 +117,7 @@ class MerkleTree(object):
         if self.leaves[index].key == key:
             self.leaves.pop(index)
             self.leaves_count -= 1
+            self._build()
         else:
             raise Exception("No such element")
 
@@ -91,13 +128,12 @@ class MerkleTree(object):
         index = self._find_position(self.leaves, key)
 
         if index >= len(self.leaves) or self.leaves[index].key > key:
-            self.leaves.insert(index, MerkleTreeLeave(key, self._get_hash(value), value))
+            self.leaves.insert(index, MerkleTreeLeave(key, value))
             self.leaves_count += 1
         elif key == self.leaves[index].key:
             self.leaves[index].value = value
-            self.leaves[index].hash = self._get_hash(value)
         else:
-            self.leaves.insert(index + 1, MerkleTreeLeave(key, self._get_hash(value), value))
+            self.leaves.insert(index + 1, MerkleTreeLeave(key, value))
             self.leaves_count += 1
 
         if is_build:
@@ -108,18 +144,23 @@ class MerkleTree(object):
         for i in range(1, len(prev_level), 2):
             left = prev_level[i - 1]
             right = prev_level[i]
-            new_element = MerkleTreeNode(max(left.key, right.key),
-                                         self._get_hash(left.hash + right.hash))
+            new_element = MerkleTreeNode(self._get_hash(left.hash + right.hash))
             new_level.append(new_element)
 
         if len(prev_level) % 2 == 1:
             last_element = prev_level[-1]
-            new_level.append(MerkleTreeNode(last_element.key, last_element.hash))
+            new_level.append(MerkleTreeNode(last_element.hash))
 
         self.levels = [new_level, ] + self.levels
 
     def _build(self):
-        self._calculate_next_level(self.leaves)
+        first_level = []
+        for leave in self.leaves:
+             new_element = MerkleTreeNode(self._get_hash(leave.value))
+             first_level.append(new_element)
+        
+        self.levels.append(first_level)
+
         while len(self.levels[0]) > 1:
             self._calculate_next_level(self.levels[0])
 
