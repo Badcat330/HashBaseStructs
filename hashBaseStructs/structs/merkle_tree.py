@@ -1,23 +1,23 @@
-import hashlib
 from __future__ import annotations
+import hashlib
 from typing import Any, NoReturn, Sized
 from blake3 import blake3
 
 
 class MerkleTreeNode(object):
-    def __init__(self, hash, size, max_key) -> NoReturn:
+    def __init__(self, hash: bytearray, size: int, max_key: Any) -> NoReturn:
         self.hash = hash
         self.size = size
         self.max_key = max_key
 
 
 class MerkleTreeLeave(object):
-    def __init__(self, key, value) -> NoReturn:
+    def __init__(self, key: Any, value: Any) -> NoReturn:
         self.key = key
         self.value = value
 
 class MerkleNodePlaceInfo(object):
-    def __init__(self, level_index=0, item_idex=0) -> NoReturn:
+    def __init__(self, level_index:int=0, item_idex:int=0) -> NoReturn:
         self.level_index = level_index
         self.item_idex = item_idex  
 
@@ -66,7 +66,6 @@ class MerkleTree(object):
     def _is_last(self, info: MerkleNodePlaceInfo) -> bool:
         return self.levels < info.level_index
 
-
     def _get_node_from_info(self, info: MerkleNodePlaceInfo) -> MerkleTreeNode:
         if info.level_index >= len(self.levels) and info.item_idex >= len(self.levels[info.level_index]):
             return None
@@ -81,8 +80,10 @@ class MerkleTree(object):
     def _get_changeset(self, destination: MerkleTree, source_info: MerkleNodePlaceInfo, destination_info: MerkleNodePlaceInfo) -> list[dict]:
         source_node = self._get_node_from_info(source_info)
         destination_node = destination._get_node_from_info(destination_info)
-        pass
-    
+        
+        if source_node.size > destination_node.size:
+
+            return self._get_changeset(destination, )
 
     def swap(self, other_tree: MerkleTree) -> NoReturn:
         self.hash_function, other_tree.hash_function = other_tree.hash_function, self.hash_function
