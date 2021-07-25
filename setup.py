@@ -1,9 +1,14 @@
 from setuptools import find_packages, setup
 
+with open("README.md", "r", encoding="utf-8") as fh:
+    long_description = fh.read()
+
 setup(
     name='hashBaseStructs',
     version='0.1.0',
     description='Here you can find Python3 lib with different hash structs for CDC task.',
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     author='Alex Glushko',
     author_email='aglushko@hse.ru',
     url='https://github.com/Badcat330/HashBaseStructs',
@@ -16,7 +21,7 @@ setup(
     package_dir={"": "hashBaseStructs"},
     packages=find_packages(where="hashBaseStructs"),
     python_requires=">=3.9",
-    install_requires=['blake3'],
+    install_requires=['blake3', 'tigerhash'],
     setup_requires=['pytest-runner'],
     tests_require=['pytest==4.4.1'],
     test_suite='tests',
