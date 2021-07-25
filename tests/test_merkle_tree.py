@@ -131,7 +131,13 @@ def test_eq(two_trees_with_data):
     assert tree_source!= tree_destination
 
 def test_changeset():
-    pass
+    tree_source = MerkleTree()
+    tree_destination = MerkleTree()
+
+    tree_source.add_range([2, 7, 12, 15, 16, 17, 25], [1, 2, 3, 4, 5, 6, 7])
+    tree_destination.add_range([8, 15, 18, 21], [1, 2, 3, 4])
+
+    print(tree_source.get_changeset(tree_destination))
 
 # Test help methodth
 def test_swap(data_fixture):
@@ -165,7 +171,8 @@ def test_clear(tree, data_fixture):
 @pytest.mark.parametrize("hash", [
     "blake2s",
     "blake2b",
-    "blake3"
+    "blake3",
+    'tigerhash'
 ])
 def test_blake3(hash, data_fixture):
     tree_source = MerkleTree(hash)

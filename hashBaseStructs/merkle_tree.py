@@ -3,6 +3,7 @@ import hashlib
 import copy
 from typing import Any, NoReturn, Sized
 from blake3 import blake3
+from tigerhash import tigerhash
 
 
 class MerkleTreeNode(object):
@@ -33,7 +34,7 @@ class MerkleNodePlaceInfo(object):
 
     def _right_children(self) -> MerkleNodePlaceInfo:
         self.level_index += 1
-        self.item_idex *= 2 + 1
+        self.item_idex = self.item_idex * 2 + 1
         return self
 
 
@@ -44,6 +45,8 @@ class MerkleTree(object):
             try:
                 if hash == 'blake3':
                     self.hash_function = blake3
+                elif hash == 'tigerhash':
+                    self.hash_function = tigerhash
                 else:
                     self.hash_function = getattr(hashlib, hash)
             except AttributeError:
@@ -95,6 +98,10 @@ class MerkleTree(object):
             if destination._is_last(destination_info):
                 # Mark leaf as Created
                 destination_leaf = destination._get_leaf_from_info(destination_info)
+
+                if destination_leaf is None:
+                    return []
+
                 return [{
                          'Operation type': 'Create',
                          'Key': destination_leaf.key,
@@ -112,6 +119,10 @@ class MerkleTree(object):
             if self._is_last(source_info):
                 # Mark leaf as Deleted
                 source_leaf = self._get_leaf_from_info(source_info)
+                
+                if source_leaf is None:
+                    return []
+
                 return [{
                          'Operation type': 'Delete',
                          'Key': source_leaf.key,
@@ -386,3 +397,12 @@ class MerkleTree(object):
 
     def __ne__(self, o: object) -> bool:
         return not self.__eq__(o)
+
+
+tree_source = MerkleTree()
+tree_destination = MerkleTree()
+
+tree_source.add_range([2, 7, 12, 15, 16, 17, 25], [1, 2, 3, 4, 5, 6, 7])
+tree_destination.add_range([8, 15, 18, 21], [1, 2, 3, 4])
+
+print(tree_source.get_changeset(tree_destination))
