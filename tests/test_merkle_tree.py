@@ -1,6 +1,6 @@
 import pytest
 import random
-from hashBaseStructs.structs.merkle_tree import MerkleTree
+from hashBaseStructs.merkle_tree import MerkleTree
 
 def data_generator(seed, length, max_number):
     random.seed(seed)
