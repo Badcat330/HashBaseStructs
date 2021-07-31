@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 MRBT (Red-Black Merkle Tree)
 ---------
@@ -23,6 +25,7 @@ from collections import deque
 import json
 from math import inf as INF
 import hashlib
+from typing import NoReturn
 from blake3 import blake3
 from tigerhash import tigerhash
 
@@ -60,7 +63,7 @@ class MerkleRedBlackTreeNode:
 
     def __init__(self, key, color=COL.RED,
                  parent=None, left=None, right=None,
-                 val=None) -> None:
+                 val=None) -> NoReturn:
         self.color = color
         self.parent = parent
         self.left = left
@@ -255,7 +258,7 @@ class MerkleRedBlackTreeNode:
         else:
             return self.right
 
-    def __setitem__(self, direction, node) -> None:
+    def __setitem__(self, direction, node) -> NoReturn:
         """
         Set node's child by indexing.
         Allows `self[direction] = node` syntax to set the child.
@@ -287,7 +290,7 @@ class MerkleRedBlackTree:
         for node Merkle augmentation. Unrecognized names default to "sha256".
     """
 
-    def __init__(self, hsh="sha256") -> None:
+    def __init__(self, hsh="sha256") -> NoReturn:
         self._root = MerkleRedBlackTreeNode(INF, COL.NIL)
 
         if isinstance(hsh, str):
@@ -321,6 +324,13 @@ class MerkleRedBlackTree:
         self._calc_digest = _calc_digest
 
         self._update_digest(self._root)
+
+    def swap(self, other_tree: MerkleRedBlackTree) -> NoReturn:
+        self._calc_digest, other_tree._calc_digest = other_tree._calc_digest, self._calc_digest
+        self._root, other_tree._root = other_tree._root, self._root
+
+    def clear(self) -> NoReturn:
+        self._root = MerkleRedBlackTreeNode(INF, COL.NIL)
 
     @classmethod
     def from_iter(cls, itr, **kwargs):
@@ -381,7 +391,7 @@ class MerkleRedBlackTree:
         """
         return self._root.digest
         
-    def insert(self, key: int, val=None) -> None:
+    def insert(self, key: int, val=None) -> NoReturn:
         """
         Insert new key if it doesn't exist.
         O(log n).
@@ -418,7 +428,7 @@ class MerkleRedBlackTree:
 
         self._insert_fix(insertion_node)
 
-    def delete(self, key: int) -> None:
+    def delete(self, key: int) -> NoReturn:
         """
         Delete key if it exists.
         O(log n).
@@ -499,7 +509,7 @@ class MerkleRedBlackTree:
             focus = focus.parent
         return val, tuple(vo)
 
-    def set(self, key: int, val=None) -> None:
+    def set(self, key: int, val=None) -> NoReturn:
         """
         Set value stored by the key or insert it if key doesn't exist.
         O(log n).
@@ -759,7 +769,7 @@ class MerkleRedBlackTree:
         """
         return self.get(key)
 
-    def __setitem__(self, key: int, val) -> None:
+    def __setitem__(self, key: int, val) -> NoReturn:
         """
         Set value stored by the key or insert it if key doesn't exist.
         Allows `self[key] = val` syntax.
@@ -796,6 +806,26 @@ class MerkleRedBlackTree:
         """
         return self._root.digest == other.digest
 
+    def __ne__(self, o: object) -> bool:
+        """
+        Check if other object of the class has not equal root digest.
+        !!! A probabilistic way to compare if structures are equal.
+        ... False negative are extremely rare with proper
+        ... choice of hash function.
+        O(1).
+
+        Parameters
+        ----------
+        other : MRBT
+            Other object to compare digests.
+
+        Returns
+        -------
+        bool
+            True if root digest are not equal, False otherwise.
+        """
+        return not self.__eq__(o)
+
     def __str__(self) -> str:
         """
         Return root node's recursive string representation.
@@ -821,7 +851,7 @@ class MerkleRedBlackTree:
         yield None
         return
 
-    def _update_digest(self, node: MerkleRedBlackTreeNode) -> None:
+    def _update_digest(self, node: MerkleRedBlackTreeNode) -> NoReturn:
         # Updates node's weight and digest.
         if node.color != COL.NIL:
             node.weight = node[0].weight + node[1].weight
@@ -859,7 +889,7 @@ class MerkleRedBlackTree:
         if subtree is not None:
             subtree.parent = parent
 
-    def _insert_fix(self, focus: MerkleRedBlackTreeNode) -> None:
+    def _insert_fix(self, focus: MerkleRedBlackTreeNode) -> NoReturn:
         # RBT generic insertion balancing routines.
         # Updates weights and digests on the way.
         self._update_digest(focus[0])
@@ -897,7 +927,7 @@ class MerkleRedBlackTree:
             self._update_digest(focus)
             focus = focus.parent
 
-    def _delete_fix(self, focus: MerkleRedBlackTreeNode, d_black: bool = False) -> None:
+    def _delete_fix(self, focus: MerkleRedBlackTreeNode, d_black: bool = False) -> NoReturn:
         # RBT generic deletion balancing routines.
         # If "double black" is used, d_black is passed as True.
         # Updates weights and digests on the way.
