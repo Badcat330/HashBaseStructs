@@ -1,6 +1,6 @@
 import pytest
 
-from core import MRBT, verify
+from hashBaseStructs.merkle_red_black_tree import MerkleRedBlackTree, verify
 from math import ceil, inf as INF
 from random import sample
 
@@ -16,7 +16,7 @@ def enum(*sequential, **named):
 COL = enum("RED", "BLACK", "NIL")
 
 
-def consistency_check(tree: MRBT):
+def consistency_check(tree: MerkleRedBlackTree):
     """
     Test structure for:
         1. BST properties:
@@ -158,12 +158,12 @@ def test_constructors_consistency(test_size):
     arr_val = [str(k) for k in arr_ins]
     dct_ins = {k: v for k, v in zip(arr_ins, arr_val)}
 
-    t1 = MRBT()
+    t1 = MerkleRedBlackTree()
     for item in zip(arr_ins, arr_val):
         t1.insert(*item)
-    t2 = MRBT.from_iter(zip(arr_ins, arr_val))
-    t3 = MRBT.from_dict(dct_ins)
-    t4 = MRBT()
+    t2 = MerkleRedBlackTree.from_iter(zip(arr_ins, arr_val))
+    t3 = MerkleRedBlackTree.from_dict(dct_ins)
+    t4 = MerkleRedBlackTree()
 
     assert t1 == t2
     assert t1 == t3
@@ -188,7 +188,7 @@ def test_basic_functionality(test_size):
     arr_mod = sample(arr_ins, len(arr_ins) // 10)
     arr_del = sample(arr_ins, len(arr_ins) // 10)
 
-    t1 = MRBT()
+    t1 = MerkleRedBlackTree()
     for i, item in enumerate(zip(arr_ins, arr_val)):
         if not i % 100:
             assert consistency_check(t1) is None
@@ -240,10 +240,10 @@ def test_validation(test_size):
     arr_ins = sample(list(range(test_size)), test_size)
     arr_val = [str(k) for k in arr_ins]
 
-    t1 = MRBT()
+    t1 = MerkleRedBlackTree()
     for i, item in enumerate(zip(arr_ins, arr_val)):
         t1.insert(*item)
-    t2 = MRBT()
+    t2 = MerkleRedBlackTree()
     t2.insert(2, 3)
 
     val, vo = t1.get(test_size // 2, verified=True)
@@ -255,14 +255,14 @@ def test_validation(test_size):
 @pytest.mark.parametrize("test_size", [100, 1000, 10000])
 def test_extra_access(test_size):
     """
-    by_keys_order
+    get_by_order
     __getitem__
     __setitem__
     """
     arr_ins = sample(list(range(test_size)), test_size)
     arr_val = [str(k) for k in arr_ins]
 
-    t1 = MRBT()
+    t1 = MerkleRedBlackTree()
     for i, item in enumerate(zip(arr_ins, arr_val)):
         if i % 2:
             t1[item[0]] = item[1]
@@ -270,12 +270,12 @@ def test_extra_access(test_size):
             t1.insert(*item)
 
     for i in range(-test_size, test_size):
-        res = t1.by_keys_order(i)
+        res = t1.get_by_order(i)
         assert res["key"] == (i + test_size) % test_size
         assert res["value"] == str(res["key"])
 
-    assert t1.by_keys_order(-test_size - 1) is None
-    assert t1.by_keys_order(test_size) is None
+    assert t1.get_by_order(-test_size - 1) is None
+    assert t1.get_by_order(test_size) is None
 
     for key in arr_ins[::10]:
         assert t1.get(key) == t1[key]
@@ -283,29 +283,29 @@ def test_extra_access(test_size):
 
 @pytest.mark.parametrize("del_frac", [0.0001, 0.001, 0.01, 0.1])
 @pytest.mark.parametrize("test_size", [100, 1000, 10000])
-def test_get_change_set(test_size, del_frac):
+def test_get_changeset(test_size, del_frac):
     """
-    get_change_set
+    get_changeset
     """
     arr_ins = sample(list(range(test_size)), test_size)
     arr_val = [str(k) for k in arr_ins]
     arr_del = sample(arr_ins, ceil(del_frac * test_size))
 
-    t1 = MRBT()
+    t1 = MerkleRedBlackTree()
     for i, item in enumerate(zip(arr_ins, arr_val)):
         t1.insert(*item)
 
-    t2 = MRBT()
+    t2 = MerkleRedBlackTree()
     for i, item in enumerate(zip(arr_ins, arr_val)):
         t2.insert(*item)
 
     for key in arr_del:
         t2.delete(key)
 
-    assert len(t1.get_change_set(t2)) == len(arr_del)
-    assert len(t2.get_change_set(t1)) == len(arr_del)
+    assert len(t1.get_changeset(t2)) == len(arr_del)
+    assert len(t2.get_changeset(t1)) == len(arr_del)
 
     for key in arr_del:
         t1.delete(key)
 
-    assert len(t1.get_change_set(t2)) == 0
+    assert len(t1.get_changeset(t2)) == 0

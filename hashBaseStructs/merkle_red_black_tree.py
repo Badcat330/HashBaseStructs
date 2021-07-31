@@ -22,6 +22,9 @@ __all__ = ["MRBT", "verify"]
 from collections import deque
 import json
 from math import inf as INF
+import hashlib
+from blake3 import blake3
+from tigerhash import tigerhash
 
 
 def enum(*sequential, **named):
@@ -35,9 +38,9 @@ def enum(*sequential, **named):
 COL = enum("RED", "BLACK", "NIL")
 
 
-class Node:
+class MerkleRedBlackTreeNode:
     """
-    MRBT node.
+    Merkle Red Black Tree (MRBT) node.
 
     Parameters
     ----------
@@ -272,9 +275,9 @@ class Node:
             self.right = node
 
 
-class MRBT:
+class MerkleRedBlackTree:
     """
-    MRBT node.
+    MerkleRedBlackTree (MRBT).
 
     Parameters
     ----------
@@ -285,35 +288,25 @@ class MRBT:
     """
 
     def __init__(self, hsh="sha256") -> None:
-        self._root = Node(INF, COL.NIL)
-        if hsh in ["sha1", "sha224", "sha256", "sha384",
-                   "sha512", "blake2b", "blake2s", "blake3"]:
-            if hsh == "sha1":
-                from hashlib import sha1
-                func = sha1
-            elif hsh == "sha224":
-                from hashlib import sha224
-                func = sha224
-            elif hsh == "sha256":
-                from hashlib import sha256
-                func = sha256
-            elif hsh == "sha384":
-                from hashlib import sha384
-                func = sha384
-            elif hsh == "sha512":
-                from hashlib import sha512
-                func = sha512
-            elif hsh == "blake2b":
-                from hashlib import blake2b
-                func = blake2b
-            elif hsh == "blake2s":
-                from hashlib import blake2s
-                func = blake2s
-            elif hsh == "blake3":
-                from blake3 import blake3
-                func = blake3
+        self._root = MerkleRedBlackTreeNode(INF, COL.NIL)
 
-            def hsh(x, y): return func(x + y).digest()
+        if isinstance(hsh, str):
+            try:
+                if hsh == 'blake3':
+                    hash_function = blake3
+                elif hsh == 'tigerhash':
+                    hash_function = tigerhash
+                else:
+                    hash_function = getattr(hashlib, hsh)
+            except AttributeError:
+                raise Exception(f'{hsh} is not supported')
+        elif callable(hsh):
+            hash_function = hsh
+        else:
+            raise Exception("Incorrect hash argument")
+
+        def hsh(x, y): 
+            return hash_function(x + y).digest()
 
         def _calc_digest(node):
             if node.color != COL.NIL:
@@ -387,12 +380,11 @@ class MRBT:
             Root digest of the structure.
         """
         return self._root.digest
-
+        
     def insert(self, key: int, val=None) -> None:
         """
         Insert new key if it doesn't exist.
         O(log n).
-
         Parameters
         ----------
         key : int
@@ -407,8 +399,8 @@ class MRBT:
         focus = search_result
         direction = focus.is_left_child()
 
-        insertion_leaf = Node(key, COL.NIL, val=val)
-        insertion_node = Node(key, parent=focus.parent,
+        insertion_leaf = MerkleRedBlackTreeNode(key, COL.NIL, val=val)
+        insertion_node = MerkleRedBlackTreeNode(key, parent=focus.parent,
                               left=insertion_leaf, right=focus)
         insertion_node.shortcut = insertion_leaf
         insertion_leaf.shortcut = insertion_node
@@ -530,7 +522,7 @@ class MRBT:
             self._update_digest(focus)
             focus = focus.parent
 
-    def by_keys_order(self, k: int, as_json: bool = False):
+    def get_by_order(self, k: int, as_json: bool = False):
         """
         Get element by it's order.
         Supports negative indexation to search in reversed order.
@@ -576,7 +568,7 @@ class MRBT:
             return json.dumps(res)
         return res
 
-    def get_change_set(self, other, as_json: bool = False):
+    def get_changeset(self, other, as_json: bool = False):
         """
         Get symmetric difference with other object of the class in json format.
         !!! Relies on digests in order to skip equal subtrees.
@@ -829,7 +821,7 @@ class MRBT:
         yield None
         return
 
-    def _update_digest(self, node: Node) -> None:
+    def _update_digest(self, node: MerkleRedBlackTreeNode) -> None:
         # Updates node's weight and digest.
         if node.color != COL.NIL:
             node.weight = node[0].weight + node[1].weight
@@ -848,7 +840,7 @@ class MRBT:
                 focus = focus[1]
         return False, focus
 
-    def _rotate(self, node: Node):
+    def _rotate(self, node: MerkleRedBlackTreeNode):
         # RBT generic rotation. Rotates node's parent in corresponding direction.
         direction = node.is_left_child()
         parent = node.parent
@@ -867,7 +859,7 @@ class MRBT:
         if subtree is not None:
             subtree.parent = parent
 
-    def _insert_fix(self, focus: Node) -> None:
+    def _insert_fix(self, focus: MerkleRedBlackTreeNode) -> None:
         # RBT generic insertion balancing routines.
         # Updates weights and digests on the way.
         self._update_digest(focus[0])
@@ -905,7 +897,7 @@ class MRBT:
             self._update_digest(focus)
             focus = focus.parent
 
-    def _delete_fix(self, focus: Node, d_black: bool = False) -> None:
+    def _delete_fix(self, focus: MerkleRedBlackTreeNode, d_black: bool = False) -> None:
         # RBT generic deletion balancing routines.
         # If "double black" is used, d_black is passed as True.
         # Updates weights and digests on the way.
@@ -990,7 +982,7 @@ class MRBT:
         return res
 
 
-def verify(trusted_digest: tuple, vo: tuple, hsh="sha256"):
+def verify(trusted_digest: tuple, verification_object: tuple, hsh="sha256"):
     """
     Validate verification object
 
@@ -1011,38 +1003,27 @@ def verify(trusted_digest: tuple, vo: tuple, hsh="sha256"):
     bool
         True if validation succeeded, False otherwise.
     """
-    if hsh in ["sha1", "sha224", "sha256", "sha384",
-               "sha512", "blake2b", "blake2s", "blake3"]:
-        if hsh == "sha1":
-            from hashlib import sha1
-            func = sha1
-        elif hsh == "sha224":
-            from hashlib import sha224
-            func = sha224
-        elif hsh == "sha256":
-            from hashlib import sha256
-            func = sha256
-        elif hsh == "sha384":
-            from hashlib import sha384
-            func = sha384
-        elif hsh == "sha512":
-            from hashlib import sha512
-            func = sha512
-        elif hsh == "blake2b":
-            from hashlib import blake2b
-            func = blake2b
-        elif hsh == "blake2s":
-            from hashlib import blake2s
-            func = blake2s
-        elif hsh == "blake3":
-            from blake3 import blake3
-            func = blake3
+    if isinstance(hsh, str):
+        try:
+            if hsh == 'blake3':
+                hash_function = blake3
+            elif hsh == 'tigerhash':
+                hash_function = tigerhash
+            else:
+                hash_function = getattr(hashlib, hsh)
+        except AttributeError:
+            raise Exception(f'{hsh} is not supported')
+    elif callable(hsh):
+        hash_function = hsh
+    else:
+        raise Exception("Incorrect hash argument")
 
-        def hsh(x, y): return func(x + y).digest()
+    def hsh(x, y): 
+        return hash_function(x + y).digest()
 
-    if trusted_digest != vo[-1]:
+    if trusted_digest != verification_object[-1]:
         return False
-    for i in range(len(vo) - 1):
-        if hsh(*vo[i]) not in vo[i + 1]:
+    for i in range(len(verification_object) - 1):
+        if hsh(*verification_object[i]) not in verification_object[i + 1]:
             return False
     return True
