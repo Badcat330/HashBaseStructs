@@ -5,6 +5,8 @@ from typing import Any, NoReturn, Sized
 from blake3 import blake3
 from tigerhash import tigerhash
 
+__all__ = ['MerkleTree']
+
 
 class MerkleTreeNode(object):
     def __init__(self, hash: bytearray, size: int, max_key: Any, min_key: Any, avg: Any, max_left_child: Any) -> NoReturn:
@@ -167,8 +169,8 @@ class MerkleTree(object):
                 return [{
                          'Operation type': 'Update',
                          'Key': source_leaf.key,
-                         'Old value': source_leaf.value,
-                         'Value': destination_leaf.value
+                         'Source value': source_leaf.value,
+                         'Destination value': destination_leaf.value
                         }]
             else:
                 # Mark source leaf as Deleted and destination leaf as Created
@@ -264,6 +266,39 @@ class MerkleTree(object):
             destination_right_subtree = destination_info._right_children()
             return self._get_changeset(destination, source_info=source_info, destination_info=destination_left_subtree) +\
                    self._get_changeset(destination, source_info=source_info, destination_info=destination_right_subtree)
+
+    def _get_changeset_legacy(self, destination: MerkleTree):
+        result = []
+        i = 0
+        j = 0
+
+        while i < len(self.leaves) and j < len(destination.leaves):
+            if self.leaves[i].key == destination.leaves[j].key and self.leaves[i].value != destination.leaves[j].value:
+                result += [{
+                            'Operation type': 'Update',
+                            'Key': self.leaves[i].key,
+                            'Old value': self.leaves[i].value,
+                            'Value': destination.leaves[j].value
+                        }]
+                i += 1
+                j += 1
+            elif self.leaves[i].key < destination.leaves[j].key:
+                result += [{
+                            'Operation type': 'Delete',
+                            'Key': self.leaves[i].key,
+                            'Value': self.leaves[i].value
+                        }]
+                i += 1
+            else:
+                result += [{
+                            'Operation type': 'Create',
+                            'Key': destination.leaves[j].key,
+                            'Value': destination.leaves[j].value
+                        }]
+                j += 1
+                
+        return result
+
 
 
     def swap(self, other_tree: MerkleTree) -> NoReturn:
@@ -382,14 +417,3 @@ class MerkleTree(object):
 
     def __ne__(self, o: object) -> bool:
         return not self.__eq__(o)
-
-
-tree_source = MerkleTree()
-tree_destination = MerkleTree()
-
-tree_source.add_range([2, 7, 12, 15, 16, 17, 25], [1, 2, 3, 4, 5, 6, 7])
-tree_destination.add_range([8, 15, 18, 21], [1, 2, 3, 4])
-
-result = tree_source.get_changeset(tree_destination)
-for i in result:
-    print(i)
