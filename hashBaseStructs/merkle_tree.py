@@ -1,12 +1,12 @@
 from __future__ import annotations
 import hashlib
 import copy
+import json
 from typing import Any, NoReturn, Sized
 from blake3 import blake3
 from tigerhash import tigerhash
 
 __all__ = ['MerkleTree']
-
 
 class MerkleTreeNode(object):
     def __init__(self, hash: bytearray, size: int, max_key: Any, min_key: Any, avg: Any, max_left_child: Any) -> NoReturn:
@@ -64,11 +64,25 @@ class MerkleTree(object):
         self.leaves = []
         self.leaves_count = 0
 
-    def add_range(self, keys: list[Any], values: list[Any]) -> NoReturn:
+    def add_iter(self, keys: list[Any], values: list[Any]) -> NoReturn:
         for key, value in zip(keys, values):
             self._seitem(key, value, is_build=False)
 
         self._build()
+
+    def add_dict(self, dict: dict):
+        for key in dict:
+            self._seitem(key, value=dict[key], is_build=False)
+        
+        self._build()
+
+    @property
+    def size(self) -> int:
+        return self.leaves_count
+
+    @property
+    def root_hash(self) -> str:
+        return self.levels[0][0].hash
     
     def _is_last(self, info: MerkleNodePlaceInfo) -> bool:
         return len(self.levels) - 1 == info.level_index
@@ -299,8 +313,6 @@ class MerkleTree(object):
                 
         return result
 
-
-
     def swap(self, other_tree: MerkleTree) -> NoReturn:
         self.hash_function, other_tree.hash_function = other_tree.hash_function, self.hash_function
         self.leaves, other_tree.leaves = other_tree.leaves, self.leaves
@@ -325,7 +337,8 @@ class MerkleTree(object):
 
         return avg
 
-    def __getitem__(self, key: Any) -> Any:
+    def get(self, key: Any, verified: bool = False) -> Any:
+        # TODO Add verified
         index = self._find_position(self.leaves, key)
 
         if self.leaves[index].key == key:
@@ -333,7 +346,10 @@ class MerkleTree(object):
         else:
             raise Exception("No such element")
 
-    def __delitem__(self, key: Any) -> NoReturn:
+    def __getitem__(self, key: Any) -> Any:
+        return self.get(key)
+
+    def delete(self, key: Any) -> NoReturn:
         index = self._find_position(self.leaves, key)
 
         if self.leaves[index].key == key:
@@ -342,6 +358,12 @@ class MerkleTree(object):
             self._build()
         else:
             raise Exception("No such element")
+
+    def __delitem__(self, key: Any) -> NoReturn:
+        self.delete(key)
+
+    def set(self, key: Any, value: Any) -> NoReturn:
+        self._seitem(key, value, is_build=True)
 
     def __setitem__(self, key: Any, value: Any) -> NoReturn:
         self._seitem(key, value, is_build=True)
@@ -391,6 +413,22 @@ class MerkleTree(object):
         while len(self.levels[0]) > 1:
             self._calculate_next_level(self.levels[0])
 
+    def get_by_order(self, order: int, as_json: bool = False):
+        data = {'key': self.leaves[order].key, 'value': self.leaves[order].value}
+        
+        if not as_json:
+            return data
+        else:
+            return json.dump(data)
+
+    def __iter__(self, as_json: bool = False) -> iter:
+        for leaf in self.leaves:
+            data = {'key': leaf.key, 'value': leaf.value}
+            if not as_json:
+                yield data
+            else:
+                yield json.dump(data)
+
     def _get_hash(self, value: Any) -> bytearray:
         value = str(value)
         value = value.encode('utf-8')
@@ -407,7 +445,7 @@ class MerkleTree(object):
             return False
 
     def __len__(self):
-        return self.leaves_count
+        return self.size
 
     def __eq__(self, o: object) -> bool:
         if type(o) is MerkleTree:
@@ -417,3 +455,9 @@ class MerkleTree(object):
 
     def __ne__(self, o: object) -> bool:
         return not self.__eq__(o)
+
+    def __str__(self) -> str:
+        pass
+
+    def verify(trusted_digest: tuple, vo: tuple, hsh="sha256"):
+        pass

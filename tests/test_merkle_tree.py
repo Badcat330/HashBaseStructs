@@ -64,7 +64,7 @@ def test_set_get(tree, data_fixture):
     
     assert len(tree) == len(data_fixture)
 
-def test_add_range(tree, data_fixture):
+def test_add_iter(tree, data_fixture):
     keys = []
     values = []
     
@@ -72,7 +72,22 @@ def test_add_range(tree, data_fixture):
         keys.append(item[0])
         values.append(item[1])
     
-    tree.add_range(keys, values)
+    tree.add_iter(keys, values)
+
+    random.shuffle(data_fixture)
+
+    for item in data_fixture:
+        assert tree[item[0]] == item[1]
+
+    assert len(tree) == len(data_fixture)
+
+def test_add_dict(tree, data_fixture):
+    dict = {}
+
+    for item in data_fixture:
+        dict[item[0]] = item[1]
+
+    tree.add_dict(dict)
 
     random.shuffle(data_fixture)
 
@@ -89,7 +104,7 @@ def test_update(tree, data_fixture):
         keys.append(item[0])
         values.append(item[1])
     
-    tree.add_range(keys, values)
+    tree.add_iter(keys, values)
 
     random.shuffle(values)
 
@@ -119,6 +134,27 @@ def test_delite(tree,  data_fixture):
     
     assert len(tree) == 0
 
+def test_get_by_order(tree,  data_fixture):
+    for item in data_fixture:
+        tree[item[0]] = item[1]
+
+    data_fixture = sorted(data_fixture, key=lambda tup: tup[0])
+
+    for order in range(len(data_fixture)):
+        data = tree.get_by_order(order)
+        assert data['key'] == data_fixture[order][0]
+        assert data['value'] == data_fixture[order][1]
+
+def test_iter(tree,  data_fixture):
+    for item in data_fixture:
+        tree[item[0]] = item[1]
+
+    data_fixture = sorted(data_fixture, key=lambda tup: tup[0])
+
+    for leaf, item in zip(tree, data_fixture):
+        assert leaf['key'] == item[0]
+        assert leaf['value'] == item[1]
+
 # Test methodth for CDC 
 def test_eq(two_trees_with_data):
     tree_source = two_trees_with_data["Source"]
@@ -126,6 +162,8 @@ def test_eq(two_trees_with_data):
 
     assert tree_source == tree_source
     assert not tree_source == tree_destination
+    assert tree_source.root_hash == tree_source.root_hash
+    assert not tree_source.root_hash == tree_destination.root_hash
 
     assert not tree_source != tree_source
     assert tree_source!= tree_destination
@@ -134,8 +172,8 @@ def test_changeset():
     tree_source = MerkleTree()
     tree_destination = MerkleTree()
 
-    tree_source.add_range([2, 7, 12, 15, 16, 17, 25], [1, 2, 3, 4, 5, 6, 7])
-    tree_destination.add_range([8, 15, 18, 21], [1, 2, 3, 4])
+    tree_source.add_iter([2, 7, 12, 15, 16, 17, 25], [1, 2, 3, 4, 5, 6, 7])
+    tree_destination.add_iter([8, 15, 18, 21], [1, 2, 3, 4])
 
     print(tree_source.get_changeset(tree_destination))
 
