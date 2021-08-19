@@ -146,7 +146,7 @@ def consistency_check(tree: MerkleRedBlackTree):
     return None
 
 
-@pytest.mark.parametrize("test_size", [100, 1000, 10000])
+@pytest.mark.parametrize("test_size", [1000])
 def test_constructors_consistency(test_size):
     """
     __iter__
@@ -161,8 +161,10 @@ def test_constructors_consistency(test_size):
     t1 = MerkleRedBlackTree()
     for item in zip(arr_ins, arr_val):
         t1.insert(*item)
-    t2 = MerkleRedBlackTree.from_iter(zip(arr_ins, arr_val))
-    t3 = MerkleRedBlackTree.from_dict(dct_ins)
+    t2 = MerkleRedBlackTree()
+    t2.add_iter(arr_ins, arr_val)
+    t3 = MerkleRedBlackTree()
+    t3.add_dict(dct_ins)
     t4 = MerkleRedBlackTree()
 
     assert t1 == t2

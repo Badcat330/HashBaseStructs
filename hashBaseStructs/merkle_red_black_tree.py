@@ -19,7 +19,7 @@ General TODO:
 """
 
 
-__all__ = ["MRBT", "verify"]
+__all__ = ["MerkleRedBlackTree", "verify"]
 
 from collections import deque
 import json
@@ -290,21 +290,21 @@ class MerkleRedBlackTree:
         for node Merkle augmentation. Unrecognized names default to "sha256".
     """
 
-    def __init__(self, hsh="sha256") -> NoReturn:
+    def __init__(self, hash="sha256") -> NoReturn:
         self._root = MerkleRedBlackTreeNode(INF, COL.NIL)
 
-        if isinstance(hsh, str):
+        if isinstance(hash, str):
             try:
-                if hsh == 'blake3':
+                if hash == 'blake3':
                     hash_function = blake3
-                elif hsh == 'tigerhash':
+                elif hash == 'tigerhash':
                     hash_function = tigerhash
                 else:
-                    hash_function = getattr(hashlib, hsh)
+                    hash_function = getattr(hashlib, hash)
             except AttributeError:
-                raise Exception(f'{hsh} is not supported')
-        elif callable(hsh):
-            hash_function = hsh
+                raise Exception(f'{hash} is not supported')
+        elif callable(hash):
+            hash_function = hash
         else:
             raise Exception("Incorrect hash argument")
 
@@ -318,7 +318,7 @@ class MerkleRedBlackTree:
             else:
                 lhs = (node.dump_data(), bytes())
                 rhs = (node.dump_key(), bytes())
-            return (hsh(*lhs), hsh(*rhs))
+            return hsh(*lhs), hsh(*rhs)
 
         # Calculates node's correct digest (either from children or key and value).
         self._calc_digest = _calc_digest
@@ -332,44 +332,35 @@ class MerkleRedBlackTree:
     def clear(self) -> NoReturn:
         self._root = MerkleRedBlackTreeNode(INF, COL.NIL)
 
-    @classmethod
-    def from_iter(cls, itr, **kwargs):
+    def add_iter(self, keys, values):
         """
-        Construct MRBT object from iterable.
+        Add object from iterable to MRBT.
         O(n log n).
 
         Parameters
         ----------
-        itr : iterable
-            Collection of keys or key-value pairs.
-        **kwargs :
-            Additional keywords passed to MRBT constructor.
+        keys : iterable
+            Collection of keys.
+        values : iterable
+            Collection of values.
         """
-        res = cls(**kwargs)
-        for it in itr:
-            if isinstance(it, (int)):
-                res.insert(it)
-            else:
-                res.insert(*it)
-        return res
 
-    @classmethod
-    def from_dict(cls, dct: dict, **kwargs):
+        for key, value in zip(keys, values):
+            self.insert(key, value)
+
+    def add_dict(self, dct: dict):
         """
-        Construct MRBT object from key-value dict object.
+        Add key-value dict object to MRBT.
         O(n log n).
 
         Parameters
         ----------
         dct : dict
             Key-value dict object.
-        **kwargs :
-            Additional keywords passed to MRBT constructor.
         """
-        res = cls(**kwargs)
+
         for it in dct.items():
-            res.insert(*it)
-        return res
+            self.insert(*it)
 
     @property
     def size(self) -> int:
