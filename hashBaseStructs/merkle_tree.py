@@ -1,8 +1,7 @@
 from __future__ import annotations
 import hashlib
-import copy
 import json
-from typing import Any, NoReturn, Sized, List
+from typing import Any, NoReturn, List, Optional, Union, Callable
 from blake3 import blake3
 from tigerhash import tigerhash
 
@@ -10,9 +9,9 @@ __all__ = ['MerkleTree']
 
 
 class MerkleTreeNode(object):
-    def __init__(self, hash: bytearray, size: int, max_key: Any, min_key: Any, avg: Any,
+    def __init__(self, hsh: bytearray, size: int, max_key: Any, min_key: Any, avg: Any,
                  max_left_child: Any) -> NoReturn:
-        self.hash = hash
+        self.hash = hsh
         self.size = size
         self.max_key = max_key
         self.min_key = min_key
@@ -27,32 +26,32 @@ class MerkleTreeLeaf(object):
 
 
 class MerkleNodePlaceInfo(object):
-    def __init__(self, level_index: int = 0, item_idex: int = 0) -> NoReturn:
+    def __init__(self, level_index: int = 0, item_index: int = 0) -> NoReturn:
         self.level_index = level_index
-        self.item_idex = item_idex
+        self.item_index = item_index
 
-    def _left_children(self) -> MerkleNodePlaceInfo:
-        return MerkleNodePlaceInfo(self.level_index + 1, self.item_idex * 2)
+    def left_children(self) -> MerkleNodePlaceInfo:
+        return MerkleNodePlaceInfo(self.level_index + 1, self.item_index * 2)
 
-    def _right_children(self) -> MerkleNodePlaceInfo:
-        return MerkleNodePlaceInfo(self.level_index + 1, self.item_idex * 2 + 1)
+    def right_children(self) -> MerkleNodePlaceInfo:
+        return MerkleNodePlaceInfo(self.level_index + 1, self.item_index * 2 + 1)
 
 
 class MerkleTree(object):
 
-    def __init__(self, hash='sha256') -> NoReturn:
-        if isinstance(hash, str):
+    def __init__(self, hsh: Union[str, Callable] = 'sha256') -> None:
+        if isinstance(hsh, str):
             try:
-                if hash == 'blake3':
+                if hsh == 'blake3':
                     self.hash_function = blake3
-                elif hash == 'tigerhash':
+                elif hsh == 'tigerhash':
                     self.hash_function = tigerhash
                 else:
-                    self.hash_function = getattr(hashlib, hash)
+                    self.hash_function = getattr(hashlib, hsh)
             except AttributeError:
-                raise Exception(f'{hash} is not supported')
-        elif callable(hash):
-            self.hash_function = hash
+                raise Exception(f'{hsh} is not supported')
+        elif callable(hsh):
+            self.hash_function = hsh
         else:
             raise Exception("Incorrect hash argument")
 
@@ -67,13 +66,13 @@ class MerkleTree(object):
 
     def add_iter(self, keys, values) -> NoReturn:
         for key, value in zip(keys, values):
-            self._seitem(key, value, is_build=False)
+            self._setitem(key, value, is_build=False)
 
         self._build()
 
     def add_dict(self, dct: dict):
         for key in dct:
-            self._seitem(key, value=dct[key], is_build=False)
+            self._setitem(key, value=dct[key], is_build=False)
 
         self._build()
 
@@ -88,15 +87,15 @@ class MerkleTree(object):
     def _is_last(self, info: MerkleNodePlaceInfo) -> bool:
         return len(self.levels) - 1 == info.level_index
 
-    def _get_node_from_info(self, info: MerkleNodePlaceInfo) -> MerkleTreeNode:
-        if info.level_index >= len(self.levels) or info.item_idex >= len(self.levels[info.level_index]):
+    def _get_node_from_info(self, info: MerkleNodePlaceInfo) -> Optional[MerkleTreeNode]:
+        if info.level_index >= len(self.levels) or info.item_index >= len(self.levels[info.level_index]):
             return None
 
-        return self.levels[info.level_index][info.item_idex]
+        return self.levels[info.level_index][info.item_index]
 
-    def _get_leaf_from_info(self, info: MerkleNodePlaceInfo) -> MerkleTreeLeaf:
-        if info.item_idex < len(self.leaves):
-            return self.leaves[info.item_idex]
+    def _get_leaf_from_info(self, info: MerkleNodePlaceInfo) -> Optional[MerkleTreeLeaf]:
+        if info.item_index < len(self.leaves):
+            return self.leaves[info.item_index]
 
         return None
 
@@ -105,8 +104,8 @@ class MerkleTree(object):
         destination_info = MerkleNodePlaceInfo()
         return self._get_changeset(destination, source_info, destination_info)
 
-    def _get_changeset(self, destination: MerkleTree, source_info: MerkleNodePlaceInfo,
-                       destination_info: MerkleNodePlaceInfo) -> list[dict]:
+    def _get_changeset(self, destination: MerkleTree, source_info: Optional[MerkleNodePlaceInfo],
+                       destination_info: Optional[MerkleNodePlaceInfo]) -> list[dict]:
         # Check if mark are given
         if source_info is None:
             if destination._is_last(destination_info):
@@ -123,8 +122,8 @@ class MerkleTree(object):
                 }]
             else:
                 # Mark destination subtrees leaves as Created
-                destination_left_subtree = destination_info._left_children()
-                destination_right_subtree = destination_info._right_children()
+                destination_left_subtree = destination_info.left_children()
+                destination_right_subtree = destination_info.right_children()
                 return self._get_changeset(destination, source_info=None, destination_info=destination_left_subtree) + \
                        self._get_changeset(destination, source_info=None, destination_info=destination_right_subtree)
 
@@ -144,8 +143,8 @@ class MerkleTree(object):
                 }]
             else:
                 # Mark source subtrees leaves as Deleted
-                source_left_subtree = source_info._left_children()
-                source_right_subtree = source_info._right_children()
+                source_left_subtree = source_info.left_children()
+                source_right_subtree = source_info.right_children()
                 return self._get_changeset(destination, source_info=source_left_subtree, destination_info=None) + \
                        self._get_changeset(destination, source_info=source_right_subtree, destination_info=None)
 
@@ -164,7 +163,7 @@ class MerkleTree(object):
         if source_node is None:
             return self._get_changeset(destination, source_info=None, destination_info=destination_info)
 
-        # Check if hashes are equel 
+        # Check if hashes are equal
         if source_node.hash == destination_node.hash:
             return []
 
@@ -205,12 +204,12 @@ class MerkleTree(object):
         if source_leaf is not None:
             if source_leaf.key <= destination_node.max_left_child:
                 # Compare source leaf and left destination subtree
-                destination_left_subtree = destination_info._left_children()
+                destination_left_subtree = destination_info.left_children()
                 return self._get_changeset(destination, source_info=source_info,
                                            destination_info=destination_left_subtree)
             else:
                 # Compare source leaf and right destination subtree
-                destination_right_subtree = destination_info._right_children()
+                destination_right_subtree = destination_info.right_children()
                 return self._get_changeset(destination, source_info=source_info,
                                            destination_info=destination_right_subtree)
 
@@ -219,12 +218,12 @@ class MerkleTree(object):
             if destination_leaf.key <= source_node.max_left_child:
                 # Compare destination leaf and left source subtree
                 # Mark source right subtree as Deleted
-                source_left_subtree = source_info._left_children()
+                source_left_subtree = source_info.left_children()
                 return self._get_changeset(destination, source_info=source_left_subtree,
                                            destination_info=destination_info)
             else:
                 # Compare destination leaf and right source subtree
-                source_right_subtree = source_info._right_children()
+                source_right_subtree = source_info.right_children()
                 return self._get_changeset(destination, source_info=source_right_subtree,
                                            destination_info=destination_info)
 
@@ -233,8 +232,8 @@ class MerkleTree(object):
             if destination_node.max_left_child < source_node.min_key:
                 # Compare source and destination right subtree
                 # Destination left subtree mark as Add
-                destination_left_subtree = destination_info._left_children()
-                destination_right_subtree = destination_info._right_children()
+                destination_left_subtree = destination_info.left_children()
+                destination_right_subtree = destination_info.right_children()
                 return self._get_changeset(destination, source_info=None, destination_info=destination_left_subtree) + \
                        self._get_changeset(destination, source_info=source_info,
                                            destination_info=destination_right_subtree)
@@ -242,53 +241,54 @@ class MerkleTree(object):
             if destination_node.max_left_child >= source_node.max_key:
                 # Compare source and destination left subtree
                 # Destination right subtree mark as Add
-                destination_left_subtree = destination_info._left_children()
-                destination_right_subtree = destination_info._right_children()
+                destination_left_subtree = destination_info.left_children()
+                destination_right_subtree = destination_info.right_children()
                 return self._get_changeset(destination, source_info=source_info,
                                            destination_info=destination_left_subtree) + \
                        self._get_changeset(destination, source_info=None, destination_info=destination_right_subtree)
 
         elif source_node.size > destination_node.size:
             if source_node.max_left_child < destination_node.min_key:
-                # Compare destination and sorce right subtree
-                # Sorce left subtree mark Deleted
-                source_left_subtree = source_info._left_children()
-                source_right_subtree = source_info._right_children()
+                # Compare destination and source right subtree
+                # Source left subtree mark Deleted
+                source_left_subtree = source_info.left_children()
+                source_right_subtree = source_info.right_children()
                 return self._get_changeset(destination, source_info=source_left_subtree, destination_info=None) + \
                        self._get_changeset(destination, source_info=source_right_subtree,
                                            destination_info=destination_info)
             if source_node.max_left_child >= destination_node.max_key:
-                # Compare destination and sorce left subtree
-                # Sorce right subtree mark Deleted
-                source_left_subtree = source_info._left_children()
-                source_right_subtree = source_info._right_children()
+                # Compare destination and source left subtree
+                # Source right subtree mark Deleted
+                source_left_subtree = source_info.left_children()
+                source_right_subtree = source_info.right_children()
                 return self._get_changeset(destination, source_info=source_left_subtree,
                                            destination_info=destination_info) + \
                        self._get_changeset(destination, source_info=source_right_subtree, destination_info=None)
 
         if source_node.avg == destination_node.avg:
             # Compare left subtrees and right subtrees of destination and source
-            destination_left_subtree = destination_info._left_children()
-            destination_right_subtree = destination_info._right_children()
-            source_left_subtree = source_info._left_children()
-            source_right_subtree = source_info._right_children()
+            destination_left_subtree = destination_info.left_children()
+            destination_right_subtree = destination_info.right_children()
+            source_left_subtree = source_info.left_children()
+            source_right_subtree = source_info.right_children()
             return self._get_changeset(destination, source_left_subtree, destination_left_subtree) + \
                    self._get_changeset(destination, source_right_subtree, destination_right_subtree)
 
         if source_node.size < destination_node.size:
-            # Compare destination and soucre left and right subtrees
-            source_left_subtree = source_info._left_children()
-            source_right_subtree = source_info._right_children()
+            # Compare destination and source left and right subtrees
+            source_left_subtree = source_info.left_children()
+            source_right_subtree = source_info.right_children()
             return self._get_changeset(destination, source_info=source_left_subtree,
                                        destination_info=destination_info) + \
-                   self._get_changeset(destination, source_info=source_right_subtree, destination=destination_info)
+                   self._get_changeset(destination, source_info=source_right_subtree, destination_info=destination_info)
         else:
             # Compare source and destination left and right subtrees
-            destination_left_subtree = destination_info._left_children()
-            destination_right_subtree = destination_info._right_children()
+            destination_left_subtree = destination_info.left_children()
+            destination_right_subtree = destination_info.right_children()
             return self._get_changeset(destination, source_info=source_info,
                                        destination_info=destination_left_subtree) + \
-                   self._get_changeset(destination, source_info=source_info, destination_info=destination_right_subtree)
+                   self._get_changeset(destination, source_info=source_info,
+                                       destination_info=destination_right_subtree)
 
     def _get_changeset_legacy(self, destination: MerkleTree):
         result = []
@@ -328,7 +328,8 @@ class MerkleTree(object):
         self.levels, other_tree.levels = other_tree.levels, self.levels
         self.leaves_count, other_tree.leaves_count = other_tree.leaves_count, self.leaves_count
 
-    def _find_position(self, leaves: List[MerkleTreeLeaf], key: Any) -> int:
+    @staticmethod
+    def _find_position(leaves: List[MerkleTreeLeaf], key: Any) -> int:
         min_index = 0
         max_index = len(leaves) - 1
         mid_index = (max_index + min_index) // 2
@@ -348,8 +349,11 @@ class MerkleTree(object):
         return mid_index
 
     def get(self, key: Any, verified: bool = False) -> Any:
-        # TODO Add verified
-        index = self._find_position(self.leaves, key)
+        index = MerkleTree._find_position(self.leaves, key)
+
+        if verified:
+            # TODO Add verified
+            pass
 
         if self.leaves[index].key == key:
             return self.leaves[index].value
@@ -360,7 +364,7 @@ class MerkleTree(object):
         return self.get(key)
 
     def delete(self, key: Any) -> NoReturn:
-        index = self._find_position(self.leaves, key)
+        index = MerkleTree._find_position(self.leaves, key)
 
         if self.leaves[index].key == key:
             self.leaves.pop(index)
@@ -373,13 +377,13 @@ class MerkleTree(object):
         self.delete(key)
 
     def set(self, key: Any, value: Any) -> NoReturn:
-        self._seitem(key, value, is_build=True)
+        self._setitem(key, value, is_build=True)
 
     def __setitem__(self, key: Any, value: Any) -> NoReturn:
-        self._seitem(key, value, is_build=True)
+        self._setitem(key, value, is_build=True)
 
-    def _seitem(self, key, value: object, is_build: bool):
-        index = self._find_position(self.leaves, key)
+    def _setitem(self, key, value: object, is_build: bool):
+        index = MerkleTree._find_position(self.leaves, key)
 
         if index >= len(self.leaves) or self.leaves[index].key > key:
             self.leaves.insert(index, MerkleTreeLeaf(key, value))
@@ -430,7 +434,7 @@ class MerkleTree(object):
         if not as_json:
             return data
         else:
-            return json.dump(data)
+            return json.dumps(data)
 
     def __iter__(self, as_json: bool = False) -> iter:
         for leaf in self.leaves:
@@ -438,7 +442,7 @@ class MerkleTree(object):
             if not as_json:
                 yield data
             else:
-                yield json.dump(data)
+                yield json.dumps(data)
 
     def _get_hash(self, value: Any) -> bytearray:
         value = str(value)
@@ -448,7 +452,7 @@ class MerkleTree(object):
         return hash_value
 
     def __contains__(self, key: Any) -> bool:
-        index = self._find_position(self.leaves, key)
+        index = MerkleTree._find_position(self.leaves, key)
 
         if index < len(self.leaves) and self.leaves[index].key == key:
             return True
@@ -470,5 +474,5 @@ class MerkleTree(object):
     def __str__(self) -> str:
         pass
 
-    def verify(trusted_digest: tuple, vo: tuple, hsh="sha256"):
+    def verify(self, vo: tuple, hsh="sha256"):
         pass

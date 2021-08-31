@@ -89,12 +89,12 @@ def test_add_iter(tree, data_fixture):
 
 
 def test_add_dict(tree, data_fixture):
-    dict = {}
+    test_dict = {}
 
     for item in data_fixture:
-        dict[item[0]] = item[1]
+        test_dict[item[0]] = item[1]
 
-    tree.add_dict(dict)
+    tree.add_dict(test_dict)
 
     random.shuffle(data_fixture)
 
@@ -132,7 +132,7 @@ def test_contain(tree, data_fixture):
         assert item[0] in tree
 
 
-def test_delite(tree, data_fixture):
+def test_delete(tree, data_fixture):
     for item in data_fixture:
         tree[item[0]] = item[1]
 
@@ -168,7 +168,7 @@ def test_iter(tree, data_fixture):
         assert leaf['value'] == item[1]
 
 
-# Test methodth for CDC
+# Test method for CDC
 def test_eq(two_trees_with_data):
     tree_source = two_trees_with_data["Source"]
     tree_destination = two_trees_with_data["Destination"]
@@ -192,7 +192,7 @@ def test_changeset():
     print(tree_source.get_changeset(tree_destination))
 
 
-# Test help methodth
+# Test help method
 def test_swap(data_fixture):
     tree_source = MerkleTree()
     tree_destination = MerkleTree()
@@ -222,15 +222,15 @@ def test_clear(tree, data_fixture):
 
 
 # Test hashes
-@pytest.mark.parametrize("hash", [
+@pytest.mark.parametrize("hsh", [
     "blake2s",
     "blake2b",
     "blake3",
     'tigerhash'
 ])
-def test_blake3(hash, data_fixture):
-    tree_source = MerkleTree(hash)
-    tree_destination = MerkleTree(hash)
+def test_blake3(hsh, data_fixture):
+    tree_source = MerkleTree(hsh)
+    tree_destination = MerkleTree(hsh)
 
     for i in range(0, len(data_fixture)):
         if i % 2 == 0:
