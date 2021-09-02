@@ -368,7 +368,7 @@ class MerkleRedBlackTree:
         return self._root.weight
 
     @property
-    def digest(self) -> tuple:
+    def root_hash(self) -> tuple:
         """
         O(1).
 
@@ -787,7 +787,7 @@ class MerkleRedBlackTree:
         bool
             True if root digest are equal, False otherwise.
         """
-        return self._root.digest == other.digest
+        return self._root.digest == other.root_hash
 
     def __ne__(self, o: object) -> bool:
         """

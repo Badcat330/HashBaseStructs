@@ -32,18 +32,20 @@ def data_fixture(request):
 def tree(request):
     if request.param == 'MerkleTree':
         return MerkleTree()
+    elif request.param == 'MerkleRedBlackTree':
+        return MerkleRedBlackTree()
     else:
         return MerkleHashGrid()
 
 
-@pytest.fixture(scope="function", params=['MerkleTree', 'MerkleRedBlakeTree', 'MerkleHashGrid'])
+@pytest.fixture(scope="function", params=['MerkleTree', 'MerkleRedBlackTree', 'MerkleHashGrid'])
 def two_trees_with_data(request, data_fixture):
     if request.param == 'MerkleTree':
         tree_source = MerkleTree()
         tree_destination = MerkleTree()
-    elif request.param == 'MerkleRedBlakeTree':
-        tree_source = MerkleTree()
-        tree_destination = MerkleTree()
+    elif request.param == 'MerkleRedBlackTree':
+        tree_source = MerkleRedBlackTree()
+        tree_destination = MerkleRedBlackTree()
     else:
         tree_source = MerkleHashGrid()
         tree_destination = MerkleHashGrid()
