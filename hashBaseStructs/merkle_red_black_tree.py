@@ -18,27 +18,22 @@ General TODO:
     2. Decide whether the code should raise exceptions.
 """
 
-
 __all__ = ["MerkleRedBlackTree", "verify"]
 
-from collections import deque
 import json
-from math import inf as INF
 import hashlib
+from collections import deque
+from enum import Enum
+from math import inf
 from typing import NoReturn
 from blake3 import blake3
 from tigerhash import tigerhash
 
 
-def enum(*sequential, **named):
-    """
-    Easier enumeration
-    """
-    enums = dict(zip(sequential, range(len(sequential))), **named)
-    return type("Enum", (), enums)
-
-
-COL = enum("RED", "BLACK", "NIL")
+class Color(Enum):
+    RED = 1
+    BLACK = 2
+    NIL = 3
 
 
 class MerkleRedBlackTreeNode:
@@ -61,7 +56,7 @@ class MerkleRedBlackTreeNode:
         Stored data, must be json-serializable.
     """
 
-    def __init__(self, key, color=COL.RED,
+    def __init__(self, key, color=Color.RED,
                  parent=None, left=None, right=None,
                  val=None) -> NoReturn:
         self.color = color
@@ -71,13 +66,13 @@ class MerkleRedBlackTreeNode:
         self.key = key
 
         self.val = None  # stored value
-        self.digest = (bytes(), bytes())  # pair of chilren digests
+        self.digest = (bytes(), bytes())  # pair of children digests
         self.weight = 0  # number of data points stored under the node
         self.shortcut = None  # dual-way link between internal node and corresponding leaf
-        if self.color == COL.NIL:
+        if self.color == Color.NIL:
             self.next = None  # next leaf in ascending keys order doubly linked list
             self.prev = None  # previous leaf in ascending keys order doubly linked list
-        if self.color == COL.NIL and self.key != INF:
+        if self.color == Color.NIL and self.key != inf:
             self.val = val
             self.weight = 1
 
@@ -90,7 +85,7 @@ class MerkleRedBlackTreeNode:
         bytes
             Bytes representation of node's key.
         """
-        if self.key == INF:
+        if self.key == inf:
             return bytes()
         return self.key.to_bytes(32, "big", signed=True)
 
@@ -218,18 +213,18 @@ class MerkleRedBlackTreeNode:
     def __str__(self, _indent: str = "  ") -> str:
         """
         Return node's recursive string representation.
-        Allows `print(self)` and `str(self)` syntaxes.
+        Allows `print(self)` and `str(self)` syntax.
 
         Returns
         -------
         str
             Node's recursive string representation.
         """
-        b = "()" if self.color != COL.NIL else "[]"
+        b = "()" if self.color != Color.NIL else "[]"
         c = "RBN"
         res = _indent[:-2] + " ⎣" + \
-            "{} {}\n".format(b[0] + c[self.color] + b[1], self.key)
-        if self.color != COL.NIL:
+              "{} {}\n".format(b[0] + c[self.color] + b[1], self.key)
+        if self.color != Color.NIL:
             res += self.right.__str__(_indent + " |")
             res += self.left.__str__(_indent + "  ")
         return res
@@ -251,7 +246,7 @@ class MerkleRedBlackTreeNode:
         Node
             Node's selected child if it exists.
         None
-            If selecter child doesn't exits.
+            If selector child doesn't exits.
         """
         if direction in ["L", 0, False]:
             return self.left
@@ -290,35 +285,35 @@ class MerkleRedBlackTree:
         for node Merkle augmentation. Unrecognized names default to "sha256".
     """
 
-    def __init__(self, hash="sha256") -> NoReturn:
-        self._root = MerkleRedBlackTreeNode(INF, COL.NIL)
+    def __init__(self, hsh="sha256") -> None:
+        self._root = MerkleRedBlackTreeNode(inf, Color.NIL)
 
-        if isinstance(hash, str):
+        if isinstance(hsh, str):
             try:
-                if hash == 'blake3':
+                if hsh == 'blake3':
                     hash_function = blake3
-                elif hash == 'tigerhash':
+                elif hsh == 'tigerhash':
                     hash_function = tigerhash
                 else:
-                    hash_function = getattr(hashlib, hash)
+                    hash_function = getattr(hashlib, hsh)
             except AttributeError:
-                raise Exception(f'{hash} is not supported')
-        elif callable(hash):
-            hash_function = hash
+                raise Exception(f'{hsh} is not supported')
+        elif callable(hsh):
+            hash_function = hsh
         else:
             raise Exception("Incorrect hash argument")
 
-        def hsh(x, y): 
+        def get_hash(x, y):
             return hash_function(x + y).digest()
 
         def _calc_digest(node):
-            if node.color != COL.NIL:
+            if node.color != Color.NIL:
                 lhs = node[0].digest
                 rhs = node[1].digest
             else:
                 lhs = (node.dump_data(), bytes())
                 rhs = (node.dump_key(), bytes())
-            return hsh(*lhs), hsh(*rhs)
+            return get_hash(*lhs), get_hash(*rhs)
 
         # Calculates node's correct digest (either from children or key and value).
         self._calc_digest = _calc_digest
@@ -330,7 +325,7 @@ class MerkleRedBlackTree:
         self._root, other_tree._root = other_tree._root, self._root
 
     def clear(self) -> NoReturn:
-        self._root = MerkleRedBlackTreeNode(INF, COL.NIL)
+        self._root = MerkleRedBlackTreeNode(inf, Color.NIL)
 
     def add_iter(self, keys, values):
         """
@@ -381,7 +376,7 @@ class MerkleRedBlackTree:
             Root digest of the structure.
         """
         return self._root.digest
-        
+
     def insert(self, key: int, val=None) -> NoReturn:
         """
         Insert new key if it doesn't exist.
@@ -400,9 +395,9 @@ class MerkleRedBlackTree:
         focus = search_result
         direction = focus.is_left_child()
 
-        insertion_leaf = MerkleRedBlackTreeNode(key, COL.NIL, val=val)
+        insertion_leaf = MerkleRedBlackTreeNode(key, Color.NIL, val=val)
         insertion_node = MerkleRedBlackTreeNode(key, parent=focus.parent,
-                              left=insertion_leaf, right=focus)
+                                                left=insertion_leaf, right=focus)
         insertion_node.shortcut = insertion_leaf
         insertion_leaf.shortcut = insertion_node
         insertion_leaf.parent = insertion_node
@@ -444,7 +439,7 @@ class MerkleRedBlackTree:
         parent = focus.parent
         sibling = focus.get_sibling()
 
-        d_black = (parent.color != COL.RED) and (sibling.color != COL.RED)
+        d_black = (parent.color != Color.RED) and (sibling.color != Color.RED)
 
         if parent.is_root():
             self._root = sibling
@@ -453,8 +448,8 @@ class MerkleRedBlackTree:
             parent.parent[1 - direction_1] = sibling
         sibling.parent = parent.parent
 
-        if sibling.color == COL.RED:
-            sibling.color = COL.BLACK
+        if sibling.color == Color.RED:
+            sibling.color = Color.BLACK
 
         self._delete_fix(sibling, d_black)
 
@@ -547,10 +542,9 @@ class MerkleRedBlackTree:
 
         Examples
         --------
-        >>> a = MRBT.from_iter([(1, "one"),
-        ...                     (4, "four"),
-        ...                     (5, "five")])
-        >>> print(a.k_order(2, as_json=False))
+        >>> a = MerkleRedBlackTree()
+        >>> a.add_iter([(1, "one"), (4, "four"), (5, "five")])
+        >>> print(a.get_by_order(2, as_json=False))
         {"key": 4, "value": "four"}
         """
         if k >= self.__len__() or k < -self.__len__():
@@ -558,7 +552,7 @@ class MerkleRedBlackTree:
         if k < 0:
             k = self.__len__() + k
         focus = self._root
-        while focus.color != COL.NIL:
+        while focus.color != Color.NIL:
             if k < focus[0].weight:
                 focus = focus[0]
             else:
@@ -569,7 +563,7 @@ class MerkleRedBlackTree:
             return json.dumps(res)
         return res
 
-    def get_changeset(self, other, as_json: bool = False):
+    def get_changeset(self, other: MerkleRedBlackTree, as_json: bool = False):
         """
         Get symmetric difference with other object of the class in json format.
         !!! Relies on digests in order to skip equal subtrees.
@@ -594,12 +588,11 @@ class MerkleRedBlackTree:
 
         Examples
         --------
-        >>> a = MRBT.from_iter([(1, "one"),
-        ...                     (2, "two"),
-        ...                     (5, "five")])
-        >>> b = MRBT.from_iter([(1, "one"),
-        ...                     (2, "six")])
-        >>> print(a.get_change_set(b, as_json=False))
+        >>> a = MerkleRedBlackTree()
+        >>> a.add_iter([(1, "one"), (4, "four"), (5, "five")])
+        >>> b = MerkleRedBlackTree()
+        >>> b.add_iter([(1, "one"), (2, "six")])
+        >>> print(a.get_changeset(b, as_json=False))
         [['Source', {'key': 2, 'value': 'two'}],
          ['Destination', {'key': 2, 'value': 'six'}],
          ['Source', {'key': 5, 'value': 'five'}]]
@@ -613,7 +606,7 @@ class MerkleRedBlackTree:
         for i in range(2):
             temp = focus[i]
             while temp is not None:
-                if temp.color != COL.RED:
+                if temp.color != Color.RED:
                     depth[i] += 1
                 temp = temp[0]
 
@@ -630,10 +623,10 @@ class MerkleRedBlackTree:
         def _next(target, skip=False):
             nonlocal queue, focus, depth
             if not skip:
-                if focus[target].color == COL.RED:
+                if focus[target].color == Color.RED:
                     queue[target].appendleft((depth[target], focus[target][1]))
                     queue[target].appendleft((depth[target], focus[target][0]))
-                elif focus[target].color == COL.BLACK:
+                elif focus[target].color == Color.BLACK:
                     queue[target].append((depth[target] - 1, focus[target][0]))
                     queue[target].append((depth[target] - 1, focus[target][1]))
                 else:
@@ -648,9 +641,9 @@ class MerkleRedBlackTree:
                 _next(0)
             elif focus[0] is None:
                 _next(1)
-            elif focus[0].color == COL.RED:
+            elif focus[0].color == Color.RED:
                 _next(0)
-            elif focus[1].color == COL.RED:
+            elif focus[1].color == Color.RED:
                 _next(1)
             elif depth[0] > depth[1]:
                 _next(0)
@@ -703,9 +696,8 @@ class MerkleRedBlackTree:
 
         Examples
         --------
-        >>> a = MRBT.from_iter([(1, "one"),
-        ...                     (4, "four"),
-        ...                     (5, "five")])
+        >>> a = MerkleRedBlackTree()
+        >>> a.add_iter([(1, "one"), (4, "four"), (5, "five")])
         >>> for item in a:
         ...     print("found:", item)
         found: {'key': 1, 'value': 'one'}
@@ -807,7 +799,7 @@ class MerkleRedBlackTree:
 
         Parameters
         ----------
-        other : MRBT
+        o : MerkleRedBlackTree
             Other object to compare digests.
 
         Returns
@@ -820,7 +812,7 @@ class MerkleRedBlackTree:
     def __str__(self) -> str:
         """
         Return root node's recursive string representation.
-        Allows `print(self)` and `str(self)` syntaxes.
+        Allows `print(self)` and `str(self)` syntax.
         O(n).
 
         Returns
@@ -836,7 +828,7 @@ class MerkleRedBlackTree:
         focus = self._root
         while focus[0] is not None:
             focus = focus[0]
-        while focus.key != INF:
+        while focus.key != inf:
             yield focus
             focus = focus.next
         yield None
@@ -844,7 +836,7 @@ class MerkleRedBlackTree:
 
     def _update_digest(self, node: MerkleRedBlackTreeNode) -> NoReturn:
         # Updates node's weight and digest.
-        if node.color != COL.NIL:
+        if node.color != Color.NIL:
             node.weight = node[0].weight + node[1].weight
         node.digest = self._calc_digest(node)
 
@@ -852,7 +844,7 @@ class MerkleRedBlackTree:
         # Returns either True and internal node with key requested
         # or False and terminating leaf.
         focus = self._root
-        while focus.color != COL.NIL:
+        while focus.color != Color.NIL:
             if key == focus.key:
                 return True, focus
             if key < focus.key:
@@ -865,7 +857,7 @@ class MerkleRedBlackTree:
         # RBT generic rotation. Rotates node's parent in corresponding direction.
         direction = node.is_left_child()
         parent = node.parent
-        subtree = node[direction] if node.color != COL.NIL else None
+        subtree = node[direction] if node.color != Color.NIL else None
 
         if parent.is_root():
             self._root = node
@@ -885,17 +877,17 @@ class MerkleRedBlackTree:
         # Updates weights and digests on the way.
         self._update_digest(focus[0])
 
-        while focus.is_child() and focus.parent.color == COL.RED:
+        while focus.is_child() and focus.parent.color == Color.RED:
             P = focus.parent
             G = focus.get_grandparent()
             U = focus.get_uncle()
             if G is None:
-                P.color = COL.BLACK
+                P.color = Color.BLACK
                 continue
-            if U.color == COL.RED:  # CASE 1
-                P.color = COL.BLACK
-                U.color = COL.BLACK
-                G.color = COL.RED
+            if U.color == Color.RED:  # CASE 1
+                P.color = Color.BLACK
+                U.color = Color.BLACK
+                G.color = Color.RED
                 self._update_digest(focus)
                 self._update_digest(P)
                 focus = G
@@ -908,11 +900,11 @@ class MerkleRedBlackTree:
                 self._update_digest(focus)
                 self._rotate(P)
                 focus = G
-                P.color = COL.BLACK
-                G.color = COL.RED
+                P.color = Color.BLACK
+                G.color = Color.RED
                 continue
-        if self._root.color == COL.RED:
-            self._root.color = COL.BLACK  # CASE 0
+        if self._root.color == Color.RED:
+            self._root.color = Color.BLACK  # CASE 0
 
         while focus is not None:
             self._update_digest(focus)
@@ -926,41 +918,41 @@ class MerkleRedBlackTree:
             direction = int(focus.is_left_child())
             P = focus.parent
             S = focus.get_sibling()
-            if S is not None and S.color != COL.NIL:
+            if S is not None and S.color != Color.NIL:
                 Sc = [S[0], S[1]]
 
             if P is None:  # CASE 1
                 d_black = False
                 continue
-            if S.color == COL.RED:  # CASE 2
+            if S.color == Color.RED:  # CASE 2
                 self._rotate(S)
-                S.color = COL.BLACK
-                P.color = COL.RED
+                S.color = Color.BLACK
+                P.color = Color.RED
                 continue
-            if P.color == COL.BLACK and S.color == COL.BLACK:
-                if Sc[0].color != COL.RED and Sc[1].color != COL.RED:  # CASE 3
-                    S.color = COL.RED
+            if P.color == Color.BLACK and S.color == Color.BLACK:
+                if Sc[0].color != Color.RED and Sc[1].color != Color.RED:  # CASE 3
+                    S.color = Color.RED
                     self._update_digest(focus)
                     focus = P
                     continue
-            if P.color == COL.RED:
-                if Sc[0].color != COL.RED and Sc[1].color != COL.RED:  # CASE 4
-                    P.color = COL.BLACK
-                    S.color = COL.RED
+            if P.color == Color.RED:
+                if Sc[0].color != Color.RED and Sc[1].color != Color.RED:  # CASE 4
+                    P.color = Color.BLACK
+                    S.color = Color.RED
                     d_black = False
                     continue
-            if S.color == COL.BLACK:
-                if Sc[direction].color == COL.RED:  # CASE 6
+            if S.color == Color.BLACK:
+                if Sc[direction].color == Color.RED:  # CASE 6
                     self._rotate(S)
                     S.color = P.color
-                    P.color = COL.BLACK
-                    Sc[direction].color = COL.BLACK
+                    P.color = Color.BLACK
+                    Sc[direction].color = Color.BLACK
                     d_black = False
                     continue
-                if Sc[1 - direction].color == COL.RED:  # CASE 5
+                if Sc[1 - direction].color == Color.RED:  # CASE 5
                     self._rotate(S[1 - direction])
-                    Sc[1 - direction].color = COL.BLACK
-                    S.color = COL.RED
+                    Sc[1 - direction].color = Color.BLACK
+                    S.color = Color.RED
                     self._update_digest(S)
                     self._update_digest(Sc[1 - direction])
                     continue
@@ -969,7 +961,7 @@ class MerkleRedBlackTree:
             self._update_digest(focus)
             focus = focus.parent
 
-    def _get_change_set__legacy(self, other, as_json: bool = False):
+    def _get_change_set__legacy(self, other: MerkleRedBlackTree, as_json: bool = False):
         """
         Exact O(n + o) implementation.
         """
@@ -1011,7 +1003,7 @@ def verify(trusted_digest: tuple, verification_object: tuple, hsh="sha256"):
     ----------
     trusted_digest : tuple
         Trusted structure digest.
-    vo : tuple
+    verification_object : tuple
         Verification object.
     hsh : str or func(lhs: bytes, rhs: bytes) -> bytes, default "sha256"
         Name of hashlib function (either of "sha1", "sha224", "sha256", "sha384", "sha512",
@@ -1039,7 +1031,7 @@ def verify(trusted_digest: tuple, verification_object: tuple, hsh="sha256"):
     else:
         raise Exception("Incorrect hash argument")
 
-    def hsh(x, y): 
+    def hsh(x, y):
         return hash_function(x + y).digest()
 
     if trusted_digest != verification_object[-1]:
