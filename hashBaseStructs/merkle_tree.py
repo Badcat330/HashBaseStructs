@@ -1,7 +1,7 @@
 from __future__ import annotations
 import hashlib
 import json
-from typing import Any, NoReturn, List, Optional, Union, Callable
+from typing import Any, NoReturn, Optional, Union, Callable, List
 from blake3 import blake3
 from tigerhash import tigerhash
 
@@ -39,7 +39,7 @@ class MerkleNodePlaceInfo(object):
 
 class MerkleTree(object):
 
-    def __init__(self, hsh: Union[str, Callable] = 'sha256') -> None:
+    def __init__(self, hsh: Union[str, Callable[..., Union[bytes, bytearray]]] = 'sha256') -> None:
         if isinstance(hsh, str):
             try:
                 if hsh == 'blake3':
@@ -51,7 +51,7 @@ class MerkleTree(object):
             except AttributeError:
                 raise Exception(f'{hsh} is not supported')
         elif callable(hsh):
-            self.hash_function = hsh
+            self._get_hash = hsh
         else:
             raise Exception("Incorrect hash argument")
 
@@ -99,13 +99,13 @@ class MerkleTree(object):
 
         return None
 
-    def get_changeset(self, destination: MerkleTree) -> list[dict]:
+    def get_changeset(self, destination: MerkleTree) -> List[dict]:
         source_info = MerkleNodePlaceInfo()
         destination_info = MerkleNodePlaceInfo()
         return self._get_changeset(destination, source_info, destination_info)
 
     def _get_changeset(self, destination: MerkleTree, source_info: Optional[MerkleNodePlaceInfo],
-                       destination_info: Optional[MerkleNodePlaceInfo]) -> list[dict]:
+                       destination_info: Optional[MerkleNodePlaceInfo]) -> List[dict]:
         # Check if mark are given
         if source_info is None:
             if destination._is_last(destination_info):
@@ -328,16 +328,15 @@ class MerkleTree(object):
         self.levels, other_tree.levels = other_tree.levels, self.levels
         self.leaves_count, other_tree.leaves_count = other_tree.leaves_count, self.leaves_count
 
-    @staticmethod
-    def _find_position(leaves: List[MerkleTreeLeaf], key: Any) -> int:
+    def _find_position(self, key: Any) -> int:
         min_index = 0
-        max_index = len(leaves) - 1
+        max_index = len(self.leaves) - 1
         mid_index = (max_index + min_index) // 2
 
         while max_index >= min_index:
-            if leaves[mid_index].key == key:
+            if self.leaves[mid_index].key == key:
                 return mid_index
-            elif leaves[mid_index].key < key:
+            elif self.leaves[mid_index].key < key:
                 min_index = mid_index + 1
             else:
                 max_index = mid_index - 1
@@ -349,7 +348,7 @@ class MerkleTree(object):
         return mid_index
 
     def get(self, key: Any, verified: bool = False) -> Any:
-        index = MerkleTree._find_position(self.leaves, key)
+        index = self._find_position(key)
 
         if verified:
             # TODO Add verified
@@ -364,7 +363,7 @@ class MerkleTree(object):
         return self.get(key)
 
     def delete(self, key: Any) -> NoReturn:
-        index = MerkleTree._find_position(self.leaves, key)
+        index = self._find_position(key)
 
         if self.leaves[index].key == key:
             self.leaves.pop(index)
@@ -383,7 +382,7 @@ class MerkleTree(object):
         self._setitem(key, value, is_build=True)
 
     def _setitem(self, key, value: object, is_build: bool):
-        index = MerkleTree._find_position(self.leaves, key)
+        index = self._find_position(key)
 
         if index >= len(self.leaves) or self.leaves[index].key > key:
             self.leaves.insert(index, MerkleTreeLeaf(key, value))
@@ -397,7 +396,7 @@ class MerkleTree(object):
         if is_build:
             self._build()
 
-    def _calculate_next_level(self, prev_level: list[MerkleTreeNode]) -> NoReturn:
+    def _calculate_next_level(self, prev_level: List[MerkleTreeNode]) -> NoReturn:
         new_level = []
         for i in range(1, len(prev_level), 2):
             left = prev_level[i - 1]
@@ -452,7 +451,7 @@ class MerkleTree(object):
         return hash_value
 
     def __contains__(self, key: Any) -> bool:
-        index = MerkleTree._find_position(self.leaves, key)
+        index = self._find_position(key)
 
         if index < len(self.leaves) and self.leaves[index].key == key:
             return True
@@ -472,7 +471,9 @@ class MerkleTree(object):
         return not self.__eq__(o)
 
     def __str__(self) -> str:
+        # TODO: finish str
         pass
 
     def verify(self, vo: tuple, hsh="sha256"):
+        # TODO: finish verify
         pass
