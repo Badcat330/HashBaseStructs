@@ -261,7 +261,7 @@ class MerkleHashGrid(object):
 
         if self.nodes[index].key == key:
             self.nodes.pop(index)
-            self.nodes -= 1
+            self.grid_size -= 1
             self._build([index])
         else:
             raise Exception("No such element")
@@ -293,7 +293,7 @@ class MerkleHashGrid(object):
             self._build_column_tree()
             self._build_row_tree()
         elif all(new_grid_side ** 2 - new_grid_side >= index for index in indexes):
-            self._build_row_tree(new_grid_side ** 2 - new_grid_side)
+            self._build_row_tree([new_grid_side ** 2 - new_grid_side])
             self._build_column_tree(list(map(lambda x: x % new_grid_side, indexes)))
         else:
             self._build_column_tree()
@@ -301,9 +301,16 @@ class MerkleHashGrid(object):
             start_index = min_index - min_index % new_grid_side
             self._build_row_tree(list(range(start_index, self.grid_size, new_grid_side)))
 
-        self.master_hash = self._get_hash(self.row_tree[0][0] + self.column_tree[0][0])
+        if self.grid_size == 0:
+            self.master_hash = b''
+        else:
+            self.master_hash = self._get_hash(self.row_tree[0][0].hsh + self.column_tree[0][0].hsh)
 
     def _build_row_tree(self, index: Optional[List[int]] = None):
+        if self.grid_side == 0:
+            self.row_tree = []
+            return
+
         if index is None:
             index = range(0, self.grid_size, self.grid_side)
 
@@ -323,6 +330,10 @@ class MerkleHashGrid(object):
             self.row_tree = [self._calculate_next_level(self.row_tree[0]), ] + self.row_tree
 
     def _build_column_tree(self, index: Optional[List[int]] = None):
+        if self.grid_side == 0:
+            self.column_tree = []
+            return
+
         if index is None:
             index = range(0, self.grid_side)
 
@@ -338,7 +349,7 @@ class MerkleHashGrid(object):
 
         self.column_tree.append(first_column_level)
 
-        while len(self.column_tree) > 1:
+        while len(self.column_tree[0]) > 1:
             self.column_tree = [self._calculate_next_level(self.column_tree[0]), ] + self.column_tree
 
     def _calculate_next_level(self, prev_level: list[MerkleNode]) -> list[MerkleNode]:

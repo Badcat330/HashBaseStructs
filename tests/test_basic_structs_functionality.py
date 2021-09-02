@@ -1,6 +1,8 @@
 import pytest
 import random
 from hashBaseStructs.merkle_tree import MerkleTree
+from hashBaseStructs.merkle_red_black_tree import MerkleRedBlackTree
+from hashBaseStructs.merkle_hash_grid import MerkleHashGrid
 
 
 def data_generator(seed, length, max_number):
@@ -26,28 +28,31 @@ def data_fixture(request):
     return data
 
 
-@pytest.fixture(scope="function")
-def tree():
-    return MerkleTree()
+@pytest.fixture(scope="function", params=['MerkleTree', 'MerkleRedBlakeTree', 'MerkleHashGrid'])
+def tree(request):
+    if request.param == 'MerkleTree':
+        return MerkleTree()
+    else:
+        return MerkleHashGrid()
 
 
-@pytest.fixture(scope="function", params=[
-    (15, 10, 100),
-    (25, 100, 1000)
-])
-def two_trees_with_data(request):
-    tree_source = MerkleTree()
-    tree_destination = MerkleTree()
-    seed = request.param[0]
-    length = request.param[1]
-    max_number = request.param[2]
-    data = data_generator(seed, length, max_number)
+@pytest.fixture(scope="function", params=['MerkleTree', 'MerkleRedBlakeTree', 'MerkleHashGrid'])
+def two_trees_with_data(request, data_fixture):
+    if request.param == 'MerkleTree':
+        tree_source = MerkleTree()
+        tree_destination = MerkleTree()
+    elif request.param == 'MerkleRedBlakeTree':
+        tree_source = MerkleTree()
+        tree_destination = MerkleTree()
+    else:
+        tree_source = MerkleHashGrid()
+        tree_destination = MerkleHashGrid()
 
-    for i in range(0, length):
+    for i in range(0, len(data_fixture)):
         if i % 2 == 0:
-            tree_source[data[i][0]] = data[i][1]
+            tree_source[data_fixture[i][0]] = data_fixture[i][1]
         else:
-            tree_destination[data[i][0]] = data[i][1]
+            tree_destination[data_fixture[i][0]] = data_fixture[i][1]
 
     return {"Source": tree_source, "Destination": tree_destination}
 
