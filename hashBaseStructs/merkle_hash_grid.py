@@ -126,6 +126,8 @@ class MerkleHashGrid(object):
                 destination_node = None
                 source_node = None
 
+                if index >= len(self.nodes) and index >= len(destination.nodes):
+                    continue
                 if index >= len(self.nodes):
                     destination_node = destination.nodes[index]
                 if index >= len(destination.nodes):
