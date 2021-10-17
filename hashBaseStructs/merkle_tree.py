@@ -2,8 +2,6 @@ from __future__ import annotations
 import hashlib
 import json
 from typing import Any, NoReturn, Optional, Union, Callable, List
-from blake3 import blake3
-from tigerhash import tigerhash
 
 __all__ = ['MerkleTree']
 
@@ -43,9 +41,11 @@ class MerkleTree(object):
         if isinstance(hsh, str):
             try:
                 if hsh == 'blake3':
+                    from blake3 import blake3
                     self.hash_function = blake3
-                elif hsh == 'tigerhash':
-                    self.hash_function = tigerhash
+                # elif hsh == 'tigerhash':
+                #     from tigerhash import tigerhash
+                #     self.hash_function = tigerhash
                 else:
                     self.hash_function = getattr(hashlib, hsh)
             except AttributeError:

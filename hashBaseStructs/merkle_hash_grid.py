@@ -3,8 +3,6 @@ import hashlib
 import json
 from math import sqrt, ceil
 from typing import Any, NoReturn, Union, Callable, Optional, List
-from blake3 import blake3
-from tigerhash import tigerhash
 
 __all__ = ['MerkleHashGrid']
 
@@ -53,9 +51,11 @@ class MerkleHashGrid(object):
         if isinstance(hsh, str):
             try:
                 if hsh == 'blake3':
+                    from blake3 import blake3
                     self.hash_function = blake3
-                elif hsh == 'tigerhash':
-                    self.hash_function = tigerhash
+                # elif hsh == 'tigerhash':
+                #     from tigerhash import tigerhash
+                #     self.hash_function = tigerhash
                 else:
                     self.hash_function = getattr(hashlib, hsh)
             except AttributeError:
@@ -354,7 +354,7 @@ class MerkleHashGrid(object):
         while len(self.column_tree[0]) > 1:
             self.column_tree = [self._calculate_next_level(self.column_tree[0]), ] + self.column_tree
 
-    def _calculate_next_level(self, prev_level: list[MerkleNode]) -> list[MerkleNode]:
+    def _calculate_next_level(self, prev_level: List[MerkleNode]) -> List[MerkleNode]:
         new_level = []
 
         for i in range(1, len(prev_level), 2):
