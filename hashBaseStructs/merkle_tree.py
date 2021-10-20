@@ -328,8 +328,8 @@ class MerkleTree(object):
             return [{
                 'op': 'u',
                 'id': source.key,
-                'v': source.value,
-                'dest_v': destination.value
+                'old v': source.value,
+                'v': destination.value
             }]
 
     def _get_changeset_legacy(self, destination: MerkleTree):

@@ -178,8 +178,8 @@ class MerkleHashGrid(object):
             return [{
                 'op': 'u',
                 'id': source.key,
-                'v': source.value,
-                'dest_v': destination.value
+                'old v': source.value,
+                'v': destination.value
             }]
         else:
             return []

@@ -232,8 +232,8 @@ def test_clear(tree, data_fixture):
 @pytest.mark.parametrize("hsh", [
     "blake2s",
     "blake2b",
-    "blake3",
-#    'tigerhash'
+    "blake3"
+    # 'tigerhash'
 ])
 def test_blake3(hsh, data_fixture):
     tree_source = MerkleTree(hsh)
