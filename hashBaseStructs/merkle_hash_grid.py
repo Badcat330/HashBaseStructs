@@ -128,10 +128,12 @@ class MerkleHashGrid(object):
 
                 if index >= len(self.nodes) and index >= len(destination.nodes):
                     continue
-                if index >= len(self.nodes):
-                    destination_node = destination.nodes[index]
-                if index >= len(destination.nodes):
+
+                if index < len(self.nodes):
                     source_node = self.nodes[index]
+
+                if index < len(destination.nodes):
+                    destination_node = destination.nodes[index]
 
                 if destination_node is not None and \
                         source_node is not None and \
