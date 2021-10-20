@@ -124,8 +124,13 @@ class MerkleTree(object):
                 # Mark destination subtrees leaves as Created
                 destination_left_subtree = destination_info.left_children()
                 destination_right_subtree = destination_info.right_children()
-                return self._get_changeset(destination, source_info=None, destination_info=destination_left_subtree) + \
-                       self._get_changeset(destination, source_info=None, destination_info=destination_right_subtree)
+                left_inconsistencies = self._get_changeset(destination,
+                                                           source_info=None,
+                                                           destination_info=destination_left_subtree)
+                right_inconsistencies = self._get_changeset(destination,
+                                                            source_info=None,
+                                                            destination_info=destination_right_subtree)
+                return left_inconsistencies + right_inconsistencies
 
         if destination_info is None:
 
@@ -145,8 +150,13 @@ class MerkleTree(object):
                 # Mark source subtrees leaves as Deleted
                 source_left_subtree = source_info.left_children()
                 source_right_subtree = source_info.right_children()
-                return self._get_changeset(destination, source_info=source_left_subtree, destination_info=None) + \
-                       self._get_changeset(destination, source_info=source_right_subtree, destination_info=None)
+                left_inconsistencies = self._get_changeset(destination,
+                                                           source_info=source_left_subtree,
+                                                           destination_info=None)
+                right_inconsistencies = self._get_changeset(destination,
+                                                            source_info=source_right_subtree,
+                                                            destination_info=None)
+                return left_inconsistencies + right_inconsistencies
 
         # Get nodes data
         # They will be treated as trees
@@ -234,18 +244,26 @@ class MerkleTree(object):
                 # Destination left subtree mark as Add
                 destination_left_subtree = destination_info.left_children()
                 destination_right_subtree = destination_info.right_children()
-                return self._get_changeset(destination, source_info=None, destination_info=destination_left_subtree) + \
-                       self._get_changeset(destination, source_info=source_info,
-                                           destination_info=destination_right_subtree)
+                left_inconsistencies = self._get_changeset(destination,
+                                                           source_info=None,
+                                                           destination_info=destination_left_subtree)
+                right_inconsistencies = self._get_changeset(destination,
+                                                            source_info=source_info,
+                                                            destination_info=destination_right_subtree)
+                return left_inconsistencies + right_inconsistencies
 
             if destination_node.max_left_child >= source_node.max_key:
                 # Compare source and destination left subtree
                 # Destination right subtree mark as Add
                 destination_left_subtree = destination_info.left_children()
                 destination_right_subtree = destination_info.right_children()
-                return self._get_changeset(destination, source_info=source_info,
-                                           destination_info=destination_left_subtree) + \
-                       self._get_changeset(destination, source_info=None, destination_info=destination_right_subtree)
+                left_inconsistencies = self._get_changeset(destination,
+                                                           source_info=source_info,
+                                                           destination_info=destination_left_subtree)
+                right_inconsistencies = self._get_changeset(destination,
+                                                            source_info=None,
+                                                            destination_info=destination_right_subtree)
+                return left_inconsistencies + right_inconsistencies
 
         elif source_node.size > destination_node.size:
             if source_node.max_left_child < destination_node.min_key:
@@ -253,17 +271,26 @@ class MerkleTree(object):
                 # Source left subtree mark Deleted
                 source_left_subtree = source_info.left_children()
                 source_right_subtree = source_info.right_children()
-                return self._get_changeset(destination, source_info=source_left_subtree, destination_info=None) + \
-                       self._get_changeset(destination, source_info=source_right_subtree,
-                                           destination_info=destination_info)
+                left_inconsistencies = self._get_changeset(destination,
+                                                           source_info=source_left_subtree,
+                                                           destination_info=None)
+                right_inconsistencies = self._get_changeset(destination,
+                                                            source_info=source_right_subtree,
+                                                            destination_info=destination_info)
+                return left_inconsistencies + right_inconsistencies
+
             if source_node.max_left_child >= destination_node.max_key:
                 # Compare destination and source left subtree
                 # Source right subtree mark Deleted
                 source_left_subtree = source_info.left_children()
                 source_right_subtree = source_info.right_children()
-                return self._get_changeset(destination, source_info=source_left_subtree,
-                                           destination_info=destination_info) + \
-                       self._get_changeset(destination, source_info=source_right_subtree, destination_info=None)
+                left_inconsistencies = self._get_changeset(destination,
+                                                           source_info=source_left_subtree,
+                                                           destination_info=destination_info)
+                right_inconsistencies = self._get_changeset(destination,
+                                                            source_info=source_right_subtree,
+                                                            destination_info=None)
+                return left_inconsistencies + right_inconsistencies
 
         if source_node.avg == destination_node.avg:
             # Compare left subtrees and right subtrees of destination and source
@@ -271,24 +298,37 @@ class MerkleTree(object):
             destination_right_subtree = destination_info.right_children()
             source_left_subtree = source_info.left_children()
             source_right_subtree = source_info.right_children()
-            return self._get_changeset(destination, source_left_subtree, destination_left_subtree) + \
-                   self._get_changeset(destination, source_right_subtree, destination_right_subtree)
+            left_inconsistencies = self._get_changeset(destination,
+                                                       source_left_subtree,
+                                                       destination_left_subtree)
+            right_inconsistencies = self._get_changeset(destination,
+                                                        source_right_subtree,
+                                                        destination_right_subtree)
+            return left_inconsistencies + right_inconsistencies
 
         if source_node.size < destination_node.size:
             # Compare destination and source left and right subtrees
             source_left_subtree = source_info.left_children()
             source_right_subtree = source_info.right_children()
-            return self._get_changeset(destination, source_info=source_left_subtree,
-                                       destination_info=destination_info) + \
-                   self._get_changeset(destination, source_info=source_right_subtree, destination_info=destination_info)
+            left_inconsistencies = self._get_changeset(destination,
+                                                       source_info=source_left_subtree,
+                                                       destination_info=destination_info)
+            right_inconsistencies = self._get_changeset(destination,
+                                                        source_info=source_right_subtree,
+                                                        destination_info=destination_info)
+            return left_inconsistencies + right_inconsistencies
+
         else:
             # Compare source and destination left and right subtrees
             destination_left_subtree = destination_info.left_children()
             destination_right_subtree = destination_info.right_children()
-            return self._get_changeset(destination, source_info=source_info,
-                                       destination_info=destination_left_subtree) + \
-                   self._get_changeset(destination, source_info=source_info,
-                                       destination_info=destination_right_subtree)
+            left_inconsistencies = self._get_changeset(destination,
+                                                       source_info=source_info,
+                                                       destination_info=destination_left_subtree)
+            right_inconsistencies = self._get_changeset(destination,
+                                                        source_info=source_info,
+                                                        destination_info=destination_right_subtree)
+            return left_inconsistencies + right_inconsistencies
 
     def _get_changeset_legacy(self, destination: MerkleTree):
         result = []

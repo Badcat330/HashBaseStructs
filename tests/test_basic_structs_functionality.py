@@ -233,7 +233,7 @@ def test_clear(tree, data_fixture):
     "blake2s",
     "blake2b",
     "blake3",
-    'tigerhash'
+#    'tigerhash'
 ])
 def test_blake3(hsh, data_fixture):
     tree_source = MerkleTree(hsh)

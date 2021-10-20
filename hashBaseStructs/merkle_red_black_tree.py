@@ -27,7 +27,7 @@ from enum import Enum
 from math import inf
 from typing import NoReturn
 from blake3 import blake3
-from tigerhash import tigerhash
+# from tigerhash import tigerhash
 
 
 class Color(Enum):
@@ -292,8 +292,8 @@ class MerkleRedBlackTree:
             try:
                 if hsh == 'blake3':
                     hash_function = blake3
-                elif hsh == 'tigerhash':
-                    hash_function = tigerhash
+                # elif hsh == 'tigerhash':
+                #     hash_function = tigerhash
                 else:
                     hash_function = getattr(hashlib, hsh)
             except AttributeError:
@@ -1020,8 +1020,8 @@ def verify(trusted_digest: tuple, verification_object: tuple, hsh="sha256"):
         try:
             if hsh == 'blake3':
                 hash_function = blake3
-            elif hsh == 'tigerhash':
-                hash_function = tigerhash
+            # elif hsh == 'tigerhash':
+            #     hash_function = tigerhash
             else:
                 hash_function = getattr(hashlib, hsh)
         except AttributeError:

@@ -200,20 +200,26 @@ class MerkleHashGrid(object):
         elif source_info.is_last():
             left_children = destination_info.left_children()
             right_children = destination_info.right_children()
-            return MerkleHashGrid._find_inconsistencies(source_info, left_children) + \
-                   MerkleHashGrid._find_inconsistencies(source_info, right_children)
+            left_inconsistencies = MerkleHashGrid._find_inconsistencies(source_info, left_children)
+            right_inconsistencies = MerkleHashGrid._find_inconsistencies(source_info, right_children)
+            return left_inconsistencies + right_inconsistencies
+
         elif destination_info.is_last():
             left_children = source_info.left_children()
             right_children = source_info.right_children()
-            return MerkleHashGrid._find_inconsistencies(left_children, destination_info) + \
-                   MerkleHashGrid._find_inconsistencies(right_children, destination_info)
+            left_inconsistencies = MerkleHashGrid._find_inconsistencies(left_children, destination_info)
+            right_inconsistencies = MerkleHashGrid._find_inconsistencies(right_children, destination_info)
+            return left_inconsistencies + right_inconsistencies
         else:
             left_children_destination = destination_info.left_children()
             right_children_destination = destination_info.right_children()
             left_children_source = source_info.left_children()
             right_children_source = source_info.right_children()
-            return MerkleHashGrid._find_inconsistencies(left_children_source, left_children_destination) + \
-                   MerkleHashGrid._find_inconsistencies(right_children_source, right_children_destination)
+            left_inconsistencies = MerkleHashGrid._find_inconsistencies(left_children_source,
+                                                                        left_children_destination)
+            right_inconsistencies = MerkleHashGrid._find_inconsistencies(right_children_source,
+                                                                         right_children_destination)
+            return left_inconsistencies + right_inconsistencies
 
     def swap(self, other_tree: MerkleHashGrid) -> NoReturn:
         self.hash_function, other_tree.hash_function = other_tree.hash_function, self.hash_function

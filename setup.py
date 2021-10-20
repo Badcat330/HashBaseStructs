@@ -21,7 +21,9 @@ setup(
     package_dir={"": "hashBaseStructs"},
     packages=find_packages(where="hashBaseStructs"),
     python_requires=">=3.9",
-    install_requires=['blake3', 'tigerhash>=0.2.0'],
+    install_requires=['blake3'
+                      # , 'tigerhash>=0.2.0'
+                      ],
     setup_requires=['pytest-runner'],
     tests_require=['pytest==4.4.1'],
     test_suite='tests',
