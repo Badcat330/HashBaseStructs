@@ -164,22 +164,22 @@ class MerkleHashGrid(object):
     def _format_change(source: Optional[GridNode] = None, destination: Optional[GridNode] = None) -> List[dict]:
         if source is None:
             return [{
-                'Operation type': 'Create',
-                'Key': destination.key,
-                'Value': destination.value
+                'op': 'i',
+                'id': destination.key,
+                'v': destination.value
             }]
         elif destination is None:
             return [{
-                'Operation type': 'Delete',
-                'Key': source.key,
-                'Value': source.value
+                'op': 'd',
+                'id': source.key,
+                'v': source.value
             }]
         elif source.hsh != destination.hsh:
             return [{
-                'Operation type': 'Update',
-                'Key': source.key,
-                'Source value': source.value,
-                'Destination value': destination.value
+                'op': 'u',
+                'id': source.key,
+                'v': source.value,
+                'dest_v': destination.value
             }]
         else:
             return []

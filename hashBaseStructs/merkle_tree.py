@@ -115,11 +115,7 @@ class MerkleTree(object):
                 if destination_leaf is None:
                     return []
 
-                return [{
-                    'Operation type': 'Create',
-                    'Key': destination_leaf.key,
-                    'Value': destination_leaf.value
-                }]
+                return MerkleTree._format_change(destination=destination_leaf)
             else:
                 # Mark destination subtrees leaves as Created
                 destination_left_subtree = destination_info.left_children()
@@ -141,11 +137,7 @@ class MerkleTree(object):
                 if source_leaf is None:
                     return []
 
-                return [{
-                    'Operation type': 'Delete',
-                    'Key': source_leaf.key,
-                    'Value': source_leaf.value
-                }]
+                return MerkleTree._format_change(source=source_leaf)
             else:
                 # Mark source subtrees leaves as Deleted
                 source_left_subtree = source_info.left_children()
@@ -191,24 +183,11 @@ class MerkleTree(object):
         if source_leaf is not None and destination_leaf is not None:
             if source_leaf.key == destination_leaf.key:
                 # Mark leaf as Update
-                return [{
-                    'Operation type': 'Update',
-                    'Key': source_leaf.key,
-                    'Source value': source_leaf.value,
-                    'Destination value': destination_leaf.value
-                }]
+                return MerkleTree._format_change(source=source_leaf, destination=destination_leaf)
             else:
                 # Mark source leaf as Deleted and destination leaf as Created
-                return [{
-                    'Operation type': 'Delete',
-                    'Key': source_leaf.key,
-                    'Value': source_leaf.value
-                }] + \
-                       [{
-                           'Operation type': 'Create',
-                           'Key': destination_leaf.key,
-                           'Value': destination_leaf.value
-                       }]
+                return MerkleTree._format_change(source=source_leaf) + \
+                       MerkleTree._format_change(destination=destination_leaf)
 
         # Compare source leaf with destination tree
         if source_leaf is not None:
@@ -329,6 +308,29 @@ class MerkleTree(object):
                                                         source_info=source_info,
                                                         destination_info=destination_right_subtree)
             return left_inconsistencies + right_inconsistencies
+
+    @staticmethod
+    def _format_change(source: Optional[MerkleTreeLeaf] = None,
+                       destination: Optional[MerkleTreeLeaf] = None) -> List[dict]:
+        if source is None:
+            return [{
+                'op': 'i',
+                'id': destination.key,
+                'v': destination.value
+            }]
+        elif destination is None:
+            return [{
+                'op': 'd',
+                'id': source.key,
+                'v': source.value
+            }]
+        else:
+            return [{
+                'op': 'u',
+                'id': source.key,
+                'v': source.value,
+                'dest_v': destination.value
+            }]
 
     def _get_changeset_legacy(self, destination: MerkleTree):
         result = []
